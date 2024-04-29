@@ -30,20 +30,20 @@ WELCOME_MSG = (
 )
 
 
-def homePage(user) -> None:  # FIXME
-    print(
-        BOLD
-        + "---"
-        + user
-        + "'s "
-        + GREEN
-        + "Soundtrackd"
-        + END
-        + BOLD
-        + " home page---"
-    )
+def homePage(username) -> None:  # FIXME
     user_input = ""
     while user_input != "l":
+        print(
+            BOLD
+            + "------"
+            + username
+            + "'s "
+            + GREEN
+            + "Soundtrackd"
+            + END
+            + BOLD
+            + " home page------"
+        )
         print(BOLD + "s" + END + ": Search for albums, artists, songs, or users")
         print(
             BOLD
@@ -55,7 +55,7 @@ def homePage(user) -> None:  # FIXME
         print(BOLD + "l" + END + ": Log out")
         user_input = input(ITALIC + "Choose an option: " + END)
         if user_input == "s":
-            pass
+            search_options(username)
         elif user_input == "f":
             pass
         elif user_input == "r":
@@ -64,8 +64,80 @@ def homePage(user) -> None:  # FIXME
             print(RED + "Invalid input entered, please try again." + END)
 
 
-def search():  # FIXME
+def search_options(username):  # FIXME
     """print search options, take search input, search database and Spotify API"""
+    user_input = ""
+    while user_input != "b":
+        print(BOLD + "What would you like to search for?" + END)
+        print(BOLD + "a" + END + ": Search for an album")
+        print(BOLD + "u" + END + ": Search for a user")
+        print(BOLD + "b" + END + ": Back")
+        user_input = input(ITALIC + "Choose an option: " + END)
+        if user_input == "a":
+            album_search(username)
+        elif user_input == "u":
+            pass
+        elif user_input != "b":
+            print(RED + "Invalid input entered, please try again." + END)
+
+
+def album_search(username):  # FIXME
+    search_str = ""
+    while search_str != "b":
+        search_str = input(ITALIC + "Enter an album name (or b to go back): " + END)
+        # use spotify API to search albums (maybe the first 10 results?)
+        # add the results to a list, print the albums - numbered
+        print(BOLD + f'---Album Search: "{search_str}"---' + END)
+        user_input = ""
+        result_list = []
+        while user_input not in ("b", "s"):
+            # for i in range(1, len(result_list)+1):
+            #   print(BOLD + i + END + ": {album_name} ({album_year}) by {artist_name}")
+            #   haven't decided if asci art should be printed here as well
+            print(BOLD + "#" + END + ": AlbumName (year) by AlbumArtist")  # placeholder
+            print(BOLD + "s" + END + ": Search again")
+            print(BOLD + "b" + END + ": Back")
+            user_input = input(ITALIC + "Choose an option: " + END)
+            if user_input.isnumeric() and int(user_input) in range(1, len(result_list)):
+                album_id = ""  # FIX THIS
+                view_album(album_id)
+                pass
+            elif user_input == "b":
+                search_str = "b"
+            elif user_input != "s":
+                print(RED + "Invalid input entered, please try again." + END)
+
+
+def view_album(albumid):
+    """----pseudocode---
+    if albumid not in database
+        create album from spotify API
+    create ascii art of the cover and put into list
+    album_info = list with album info
+
+    user_input = ""
+    while user_input != "b":
+        for i in range(len(ascii art list)):
+            if i in range(len(album_info)):
+                print(asci_list[i] + END + album_info[i])
+            else:
+                print(asci_list[i] + END)
+        print(BOLD + "t" + END + ": View tracklist (comment on songs)")
+        print(BOLD + "o" + END + ": Open album in Spotify")
+        print(BOLD + "c" + END + ": Create an album review")
+        print(BOLD + "r" + END + ": View album's existing reviews")
+        print(BOLD + "b" + END + ": Back")
+        if user_input == "t":
+            view tracklist
+        elif user_input == "o":
+            webbrowser.open(album link)
+        elif user_input == "c":
+            write_review()
+        elif user_input == "r":
+            print a bunch of reviews that match the album id
+        elif user_input != "b":
+            print(RED + "Invalid input entered, please try again." + END)
+    """
     pass
 
 
@@ -86,6 +158,12 @@ def view_user(curr_user, viewed_user):  # FIXME
             pass
         elif user_input != "b":
             print(RED + "Invalid input entered, please try again." + END)
+
+
+def print_review(review_id):
+    """print a review in a pretty format
+    called for each review when a user views their feed, views reviews on an album, or views another user's reviews
+    """
 
 
 # completed login
