@@ -2,6 +2,7 @@ from typing import Union
 from fastapi import FastAPI, HTTPException
 import uvicorn
 import mysql.connector
+from pydantic import BaseModel
 
 app = FastAPI()
 
@@ -15,29 +16,33 @@ def read_root():
 def read_item(item_id: int, q: Union[str, None] = None):
     return {"item_id": item_id, "q": q}
 
+class Register(BaseModel):
+    email: str
+    username: str
+    password: str
 
 # Register for an account. SQL part works, not necessarily the response part
-@app.post("/register/")
-def create(email: str, username: str, password: str):
+@app.post("/register")
+def create(info: Register):
     global db, cursor
-    print("Recieved registration request from", email, username, password)
+    print("Recieved registration request from", info.email, info.username, info.password)
     # Check for nonunique email -- this doesn't quite work right I don't think
     cursor.execute("SELECT email FROM user")
     result = [i[0] for i in cursor.fetchall()]
-    if email in result:
+    if info.email in result:
         raise HTTPException(status_code=400, detail="A user exists with this email")
 
     # Check for nonunique username -- this doesn't quite work right I don't think
     cursor.execute("SELECT username FROM user")
     result = [i[0] for i in cursor.fetchall()]
-    if username in result:
+    if info.username in result:
         raise HTTPException(status_code=400, detail="A user exists with this username.")
 
     cursor.execute(
-        f"INSERT INTO user VALUES ('{email}', '{username}', '{password}', '{username}')"
+        f"INSERT INTO user VALUES ('{info.email}', '{info.username}', '{info.password}', '{info.username}')"
     )
     db.commit()
-    return {"email": email, "username": username, "password": password}
+    return {"email": info.email, "username": info.username, "password": info.password}
 
 
 if __name__ == "__main__":
