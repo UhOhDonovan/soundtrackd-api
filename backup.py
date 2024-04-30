@@ -2,11 +2,16 @@ import mysql.connector
 import re
 import getpass
 import hashlib
+from dotenv import main
+from requests import post, get
+import os
+import base64
+import json
 
 END = "\033[0m"
 BOLD = "\033[1m"
 ITALIC = "\033[3m"
-UNDERSCORE = "\033[4m"
+UNDERLINE = "\033[4m"
 BLINK = "\033[5m"
 REVERSE = "\033[7m"
 HIDDEN = "\033[7m"
@@ -28,6 +33,27 @@ WELCOME_MSG = (
     + "--------------"
     + END
 )
+
+main.load_dotenv()
+CLIENT_ID = os.getenv("CLIENT_ID")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+
+
+def get_token():
+    """Retrieve access token for spotify API (Expires after 1 hour)"""
+    authorization_str = (CLIENT_ID + ":" + CLIENT_SECRET).encode("utf-8")
+    authorization_str = str(base64.b64encode(authorization_str), "utf-8")
+
+    url = "https://accounts.spotify.com/api/token"
+    headers = {
+        "Authorization": "Basic " + authorization_str,
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+    data = {"grant_type": "client_credentials"}
+
+    response = post(url, headers=headers, data=data)
+    token = json.loads(response.content)["access_token"]
+    return token
 
 
 def homePage(username) -> None:  # FIXME
@@ -81,41 +107,69 @@ def search_options(username):  # FIXME
             print(RED + "Invalid input entered, please try again." + END)
 
 
+def spotify_query(token, type, search):
+    print("Connecting to " + GREEN + BOLD + "Spotify" + END + "...")
+    url = "https://api.spotify.com/v1/search"
+    headers = {"Authorization": "Bearer " + token}
+    query = f"?q={search}&type={type}&limit=10"
+    query_url = url + query
+    response = get(query_url, headers=headers)
+    result = json.loads(response.content)[type+"s"]["items"]
+    return result
+
+
 def album_search(username):  # FIXME
     search_str = ""
+    token = get_token()
     while search_str != "b":
         search_str = input(ITALIC + "Enter an album name (or b to go back): " + END)
-        # use spotify API to search albums (maybe the first 10 results?)
-        # add the results to a list, print the albums - numbered
+        results = spotify_query(token, "album", search_str)
+
+        # use spotify API to search albums (get the first 10 results)
         print(BOLD + f'---Album Search: "{search_str}"---' + END)
         user_input = ""
-        result_list = []
         while user_input not in ("b", "s"):
-            # for i in range(1, len(result_list)+1):
-            #   print(BOLD + i + END + ": {album_name} ({album_year}) by {artist_name}")
-            #   haven't decided if asci art should be printed here as well
-            print(BOLD + "#" + END + ": AlbumName (year) by AlbumArtist")  # placeholder
+            for i in range(len(results)):
+                print(
+                    BOLD
+                    + str(i + 1)
+                    + END + ": " + UNDERLINE
+                    + f"{results[i]["name"]} ({results[i]["release_date"][:4]})" + END + " by ", end=""
+                )
+                for x in results[i]["artists"][:-1]:
+                    print(x["name"], end=", ")
+                print(results[i]["artists"][-1]["name"])
             print(BOLD + "s" + END + ": Search again")
             print(BOLD + "b" + END + ": Back")
             user_input = input(ITALIC + "Choose an option: " + END)
-            if user_input.isnumeric() and int(user_input) in range(1, len(result_list)):
-                album_id = ""  # FIX THIS
-                view_album(album_id)
-                pass
+            if user_input.isnumeric() and int(user_input) in range(1, len(results)):
+                view_album(username, results[i]["id"])
+                user_input = "s"
             elif user_input == "b":
                 search_str = "b"
             elif user_input != "s":
                 print(RED + "Invalid input entered, please try again." + END)
 
 
-def view_album(albumid):
+def view_album(username, albumid):
+    print(f"viewing album with id {albumid}")
     """----pseudocode---
     if albumid not in database
         create album from spotify API
     create ascii art of the cover and put into list
-    album_info = list with album info
-
-    user_input = ""
+    album_info = list with album info"""
+    cursor.execute("SELECT title, release_date, artist_id FROM album WHERE id = %s",[albumid],)
+    album_info = cursor.fetchall()
+    if not album_info:
+        # create_album()
+        cursor.execute("INSERT INTO artist VALUES ('fakeartistid', 'fakename')")
+        cursor.execute("INSERT INTO album VALUES (%s, 'faketitle', '2002-01-01', 'fakeartistid')", [albumid],)
+        cursor.execute("SELECT title, release_date, artist_id FROM album WHERE id = %s",[albumid],)
+        album_info = cursor.fetchall()
+        #get info from spotify
+    album_info = album_info[0]
+    print(BOLD + f"------{album_info[0]} ({str(album_info[1])[:4]})------" + END)
+    """user_input = ""
     while user_input != "b":
         for i in range(len(ascii art list)):
             if i in range(len(album_info)):
@@ -139,7 +193,9 @@ def view_album(albumid):
             print(RED + "Invalid input entered, please try again." + END)
     """
     pass
-
+def create_album(albumid):
+    # if artist doesnt exist, make it first
+    pass
 
 def view_user(curr_user, viewed_user):  # FIXME
     """When a user is selected, give option to follow or view their posted reviews (maybe also some summary stats)"""
@@ -195,22 +251,23 @@ def login() -> None:
                     "SELECT username, password FROM user WHERE username = %s",
                     [username],
                 )
-            dbresult = cursor.fetchall()[0]
+            dbresult = cursor.fetchall()
             if dbresult:
+                credentials = dbresult[0]
                 while not done:
                     password = getpass.getpass(
                         ITALIC + "Enter your password (or e to exit): " + END
                     )
                     if password == "e":
                         done = True
-                    elif dbresult[1] == hashlib.sha256(password.encode()).hexdigest():
+                    elif credentials[1] == hashlib.sha256(password.encode()).hexdigest():
                         print(
                             BOLD
                             + GREEN
-                            + f"Successfully logged in as {dbresult[0]}!"
+                            + f"Successfully logged in as {credentials[0]}!"
                             + END
                         )
-                        homePage(dbresult[0])
+                        homePage(credentials[0])
                         done = True
                     else:
                         print(RED + "Incorrect password, please try again." + END)

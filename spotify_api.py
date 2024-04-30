@@ -6,7 +6,6 @@ import base64
 import json
 
 main.load_dotenv()
-
 client_id = os.getenv("CLIENT_ID")
 client_secret = os.getenv("CLIENT_SECRET")
 
@@ -33,7 +32,7 @@ def get_auth_header(token):
 
 def search_album(token, name):
     url = "https://api.spotify.com/v1/search"
-    headers = get_auth_header(token)
+    headers = {"Authorization": "Bearer " + token}
     query = f"?q={name}&type=album&limit=10"
     query_url = url + query
     response = get(query_url, headers=headers)
@@ -41,6 +40,8 @@ def search_album(token, name):
     print(result)
     return result
 
+var = "hello"
+print("\33[4m" + f"test {var}" + "\033[0m")
 search = input("Enter an album to search: ")
 search_results = search_album(get_token(), search)
 for i in range(10):
