@@ -107,7 +107,7 @@ def search_options(username):  # FIXME
             print(RED + "Invalid input entered, please try again." + END)
 
 
-def spotify_query(token, type, search):
+def spotify_search(token, type, search):
     print("Connecting to " + GREEN + BOLD + "Spotify" + END + "...")
     url = "https://api.spotify.com/v1/search"
     headers = {"Authorization": "Bearer " + token}
@@ -123,7 +123,7 @@ def album_search(username):  # FIXME
     token = get_token()
     while search_str != "b":
         search_str = input(ITALIC + "Enter an album name (or b to go back): " + END)
-        results = spotify_query(token, "album", search_str)
+        results = spotify_search(token, "album", search_str)
 
         # use spotify API to search albums (get the first 10 results)
         print(BOLD + f'---Album Search: "{search_str}"---' + END)
@@ -194,7 +194,22 @@ def view_album(username, albumid):
     """
     pass
 def create_album(albumid):
-    # if artist doesnt exist, make it first
+    print("Retrieving data from " + GREEN + BOLD + "Spotify" + END + "...")
+    token = get_token()
+    url = f"https://api.spotify.com/v1/albums/{albumid}"
+    headers = {"Authorization": "Bearer " + token}
+    response = get(url, headers=headers)
+    album = json.loads(response.content)
+
+    cursor.execute("INSERT INTO album VALUES (%s, %s, %s)", [albumid, album["name"], album["release_date"], ],)
+    # Add artist to database if not there
+    for x in album["artists"]:
+        artist = [x["id"], x["name"]]
+        cursor.execute("SELECT id, name FROM artist WHERE id=%s and name=%s", artist,)
+        if not cursor.fetchall():
+            cursor.execute("INSERT INTO artist VALUES (%s, %s)", [x["id"], x["name"]])
+        cursor.execute("INSERT INTO released_album VALUES (%s, %s)", [x["id"], albumid])
+    return result
     pass
 
 def view_user(curr_user, viewed_user):  # FIXME

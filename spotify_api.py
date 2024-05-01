@@ -39,6 +39,11 @@ def search_album(token, name):
     result = json.loads(response.content)["albums"]["items"]
     print(result)
     return result
+def get_album(albumid, token):
+    url = f"https://api.spotify.com/v1/albums/{albumid}"
+    headers = {"Authorization": "Bearer " + token}
+    response = get(url, headers=headers)
+    return json.loads(response.content)
 
 var = "hello"
 print("\33[4m" + f"test {var}" + "\033[0m")
@@ -49,3 +54,5 @@ for i in range(10):
     print(f"Title: {search_results[i]["name"]} ({search_results[i]["release_date"][:4]})")
     print("Artist:", search_results[i]["artists"][0]["name"])
     print("Link:", search_results[i]["external_urls"]["spotify"])
+
+print(json.dumps(get_album(search_results[0]["id"], get_token()), indent=2))
