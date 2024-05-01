@@ -7,6 +7,7 @@ from requests import post, get
 import os
 import base64
 import json
+import webbrowser
 
 END = "\033[0m"
 BOLD = "\033[1m"
@@ -34,42 +35,31 @@ WELCOME_MSG = (
     + END
 )
 
+# Get environment variables from .env file
 main.load_dotenv()
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
-
-def get_token():
-    """Retrieve access token for spotify API (Expires after 1 hour)"""
+# finished
+def get_token() -> str:
+    """Retrieve access token for Spotify API (expires after 1 hour)"""
     authorization_str = (CLIENT_ID + ":" + CLIENT_SECRET).encode("utf-8")
     authorization_str = str(base64.b64encode(authorization_str), "utf-8")
-
     url = "https://accounts.spotify.com/api/token"
     headers = {
         "Authorization": "Basic " + authorization_str,
         "Content-Type": "application/x-www-form-urlencoded",
     }
     data = {"grant_type": "client_credentials"}
-
     response = post(url, headers=headers, data=data)
     token = json.loads(response.content)["access_token"]
     return token
 
 
-def homePage(username) -> None:  # FIXME
+def homePage(username: str) -> None:  # FIXME: missing feed and posted reviews viewing
     user_input = ""
     while user_input != "l":
-        print(
-            BOLD
-            + "------"
-            + username
-            + "'s "
-            + GREEN
-            + "Soundtrackd"
-            + END
-            + BOLD
-            + " home page------"
-        )
+        print(BOLD + "------" + username + "'s " + GREEN + "Soundtrackd" + END + BOLD + " home page------")
         print(BOLD + "s" + END + ": Search for albums, artists, songs, or users")
         print(
             BOLD
@@ -90,8 +80,8 @@ def homePage(username) -> None:  # FIXME
             print(RED + "Invalid input entered, please try again." + END)
 
 
-def search_options(username):  # FIXME
-    """print search options, take search input, search database and Spotify API"""
+def search_options(username: str) -> None:  # FIXME: missing user search
+    """Print search options, choose what kind of search to do, route to that search"""
     user_input = ""
     while user_input != "b":
         print(BOLD + "What would you like to search for?" + END)
@@ -106,8 +96,9 @@ def search_options(username):  # FIXME
         elif user_input != "b":
             print(RED + "Invalid input entered, please try again." + END)
 
-
-def spotify_search(token, type, search):
+# Finished
+def spotify_search(token: str, type:str , search:str ) -> list:
+    """Uses the Spotify web API to return 10 search results of the given type relating to the search string"""
     print("Connecting to " + GREEN + BOLD + "Spotify" + END + "...")
     url = "https://api.spotify.com/v1/search"
     headers = {"Authorization": "Bearer " + token}
@@ -117,18 +108,19 @@ def spotify_search(token, type, search):
     result = json.loads(response.content)[type+"s"]["items"]
     return result
 
-
-def album_search(username):  # FIXME
+# Finished
+def album_search(username: str) -> None:
+    """Prompt for an album name, return 10 options from spotify search, allow viewing of each option or starting a new search"""
     search_str = ""
     token = get_token()
     while search_str != "b":
+        # use the spotify web API to search albums (get the first 10 results)
+        print(BOLD + f'---Album Search---' + END)
         search_str = input(ITALIC + "Enter an album name (or b to go back): " + END)
         results = spotify_search(token, "album", search_str)
-
-        # use spotify API to search albums (get the first 10 results)
-        print(BOLD + f'---Album Search: "{search_str}"---' + END)
         user_input = ""
         while user_input not in ("b", "s"):
+            print(BOLD + f'---Album Search: "{search_str}"---' + END)
             for i in range(len(results)):
                 print(
                     BOLD
@@ -142,77 +134,97 @@ def album_search(username):  # FIXME
             print(BOLD + "s" + END + ": Search again")
             print(BOLD + "b" + END + ": Back")
             user_input = input(ITALIC + "Choose an option: " + END)
-            if user_input.isnumeric() and int(user_input) in range(1, len(results)):
-                view_album(username, results[i]["id"])
-                user_input = "s"
+            if user_input.isnumeric() and int(user_input) in range(1, len(results) + 1):
+                view_album(username, results[int(user_input) - 1]["id"])
+                user_input = ""
             elif user_input == "b":
                 search_str = "b"
             elif user_input != "s":
                 print(RED + "Invalid input entered, please try again." + END)
 
 
-def view_album(username, albumid):
-    print(f"viewing album with id {albumid}")
-    """----pseudocode---
-    if albumid not in database
-        create album from spotify API
-    create ascii art of the cover and put into list
-    album_info = list with album info"""
-    cursor.execute("SELECT title, release_date, artist_id FROM album WHERE id = %s",[albumid],)
+def view_album(username: str, album_id: str) -> None: #FIXME: missing all options implementations
+    # search for the album in the database. If missing, add it
+    cursor.execute("SELECT title, release_date, num_tracks, spotify_link, image_link FROM album WHERE id = %s",[album_id],)
     album_info = cursor.fetchall()
     if not album_info:
-        # create_album()
-        cursor.execute("INSERT INTO artist VALUES ('fakeartistid', 'fakename')")
-        cursor.execute("INSERT INTO album VALUES (%s, 'faketitle', '2002-01-01', 'fakeartistid')", [albumid],)
-        cursor.execute("SELECT title, release_date, artist_id FROM album WHERE id = %s",[albumid],)
+        create_album(album_id)
+        cursor.execute("SELECT title, release_date, num_tracks, spotify_link, image_link FROM album WHERE id = %s",[album_id],)
         album_info = cursor.fetchall()
-        #get info from spotify
     album_info = album_info[0]
-    print(BOLD + f"------{album_info[0]} ({str(album_info[1])[:4]})------" + END)
-    """user_input = ""
+    # create and print title string (100 characters wide)
+    title_str = f"{album_info[0]} ({str(album_info[1])[:4]})"
+    left_pad = "-" * ((98 - len(title_str)) // 2)
+    right_pad = left_pad
+    if(len(left_pad) * 2 + len(title_str) + 2 < 100):
+        right_pad += "-"
+    print(BOLD + "+" + left_pad + title_str + right_pad + "+" + END)
+    # create and print information portion
+    info_str = "| Released by {:<57} | {:>3} tracks | {:>3} reviews |"
+    cursor.execute("SELECT artist_id FROM released_album WHERE album_id=%s", [album_id])
+    artist_ids = cursor.fetchall()
+    artist_str = ""
+    for id in artist_ids[:-1]:
+        cursor.execute("SELECT name FROM artist WHERE id=%s", [id[0]],)
+        name = cursor.fetchall()[0][0]
+        artist_str += name + ", "
+    cursor.execute("SELECT name FROM artist WHERE id=%s", [artist_ids[-1][0]],)
+    name = cursor.fetchall()[0][0]
+    artist_str += name
+    if len(artist_str) > 57:
+        artist_str = artist_str[:54] + "..."
+    print(info_str.format(artist_str, album_info[2], 0))
+    print(BOLD + "+" + "-" * 98 + "+" + END)
+    # begin input loop
+    user_input = ""
     while user_input != "b":
-        for i in range(len(ascii art list)):
-            if i in range(len(album_info)):
-                print(asci_list[i] + END + album_info[i])
-            else:
-                print(asci_list[i] + END)
         print(BOLD + "t" + END + ": View tracklist (comment on songs)")
-        print(BOLD + "o" + END + ": Open album in Spotify")
-        print(BOLD + "c" + END + ": Create an album review")
+        print(BOLD + "c" + END + ": View cover art")
+        print(BOLD + "s" + END + ": Open album in " + GREEN + BOLD + "Spotify" + END)
+        print(BOLD + "w" + END + ": Write an album review")
         print(BOLD + "r" + END + ": View album's existing reviews")
         print(BOLD + "b" + END + ": Back")
+        user_input = input(ITALIC + "Choose an option: " + END)
         if user_input == "t":
-            view tracklist
-        elif user_input == "o":
-            webbrowser.open(album link)
+            #view tracklist
+            pass
         elif user_input == "c":
-            write_review()
+            webbrowser.open(album_info[4])
+        elif user_input == "s":
+            webbrowser.open(album_info[3])
+        elif user_input == "w":
+            #write_review()
+            pass
         elif user_input == "r":
-            print a bunch of reviews that match the album id
+            #print a bunch of reviews that match the album id
+            pass
         elif user_input != "b":
             print(RED + "Invalid input entered, please try again." + END)
-    """
-    pass
-def create_album(albumid):
+
+
+def create_album(album_id: str) -> None: # FIXME: missing tracks
+    """Transfer album/artist information from Spotify API to the database"""
+    global db, cursor
     print("Retrieving data from " + GREEN + BOLD + "Spotify" + END + "...")
     token = get_token()
-    url = f"https://api.spotify.com/v1/albums/{albumid}"
+    url = f"https://api.spotify.com/v1/albums/{album_id}"
     headers = {"Authorization": "Bearer " + token}
     response = get(url, headers=headers)
     album = json.loads(response.content)
 
-    cursor.execute("INSERT INTO album VALUES (%s, %s, %s)", [albumid, album["name"], album["release_date"], ],)
-    # Add artist to database if not there
+    cursor.execute("INSERT INTO album VALUES (%s, %s, %s, %s, %s, %s)", [album_id, album["name"], album["release_date"], album["total_tracks"], 
+                                                                         album["external_urls"]["spotify"], album["images"][0]["url"]],)
+    # add artist released album relationship for each artist
     for x in album["artists"]:
-        artist = [x["id"], x["name"]]
-        cursor.execute("SELECT id, name FROM artist WHERE id=%s and name=%s", artist,)
+        # Add artist to database if not there already
+        cursor.execute("SELECT * FROM artist WHERE id=%s", [x["id"]],)
         if not cursor.fetchall():
-            cursor.execute("INSERT INTO artist VALUES (%s, %s)", [x["id"], x["name"]])
-        cursor.execute("INSERT INTO released_album VALUES (%s, %s)", [x["id"], albumid])
-    return result
-    pass
+            cursor.execute("INSERT INTO artist VALUES (%s, %s, %s)", [x["id"], x["name"], x["external_urls"]["spotify"]],)
+        cursor.execute("INSERT INTO released_album VALUES (%s, %s)", [x["id"], album_id])
+    db.commit()
 
-def view_user(curr_user, viewed_user):  # FIXME
+
+def view_user(curr_user, viewed_user):  # FIXME: not functional at all
     """When a user is selected, give option to follow or view their posted reviews (maybe also some summary stats)"""
     global cursor, db
     user_input = ""
@@ -231,13 +243,13 @@ def view_user(curr_user, viewed_user):  # FIXME
             print(RED + "Invalid input entered, please try again." + END)
 
 
-def print_review(review_id):
+def print_review(review_id): # FIXME: Not functional at all
     """print a review in a pretty format
     called for each review when a user views their feed, views reviews on an album, or views another user's reviews
     """
 
 
-# completed login
+# Finished
 def login() -> None:
     """Log in page. Prompts for email/username and password, validates, and enters homepage if a matching user exists"""
     global cursor
@@ -294,7 +306,7 @@ def login() -> None:
                 )
 
 
-# Completed
+# Finished
 def register() -> None:
     """Registration page. Prompts for email address and username, validates. Prompts for password. Stores the user in the databse."""
     global cursor, db
@@ -389,7 +401,7 @@ def register() -> None:
                     else:  # Insert new user to database and exit
                         password = hashlib.sha256(password.encode()).hexdigest()
                         cursor.execute(
-                            "INSERT INTO user VALUES (%s, %s, %s)",
+                            "INSERT INTO user (email, username, password) VALUES (%s, %s, %s)",
                             (input_list[0], input_list[1], password),
                         )
                         db.commit()
@@ -399,7 +411,8 @@ def register() -> None:
 
 if __name__ == "__main__":
     dbuser = input("Enter your local MySQL username (usually root): ")
-    dbpass = input("enter your local MySQL password: ")
+    dbpass = input("Enter your local MySQL password: ")
+    # Conenct to the database (local)
     try:
         db = mysql.connector.connect(
             host="localhost",
@@ -416,7 +429,7 @@ if __name__ == "__main__":
         )
     cursor = db.cursor()
     user_input = ""
-
+    
     # Welcome/login/register (home page of the app is entered from within login)
     print(WELCOME_MSG)
     while user_input != "q":
