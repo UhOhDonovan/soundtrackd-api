@@ -8,6 +8,10 @@ import os
 import base64
 import json
 import webbrowser
+import datetime
+from datetime import date
+from time import strftime
+import time
 
 END = "\033[0m"
 BOLD = "\033[1m"
@@ -152,14 +156,13 @@ def view_album(username: str, album_id: str) -> None: #FIXME: missing all option
         cursor.execute("SELECT title, release_date, num_tracks, spotify_link, image_link FROM album WHERE id = %s",[album_id],)
         album_info = cursor.fetchall()
     album_info = album_info[0]
-    # create and print title string (100 characters wide)
+    # create title string for printing in the loop (100 characters wide)
     title_str = f"{album_info[0]} ({str(album_info[1])[:4]})"
     left_pad = "-" * ((98 - len(title_str)) // 2)
     right_pad = left_pad
     if(len(left_pad) * 2 + len(title_str) + 2 < 100):
         right_pad += "-"
-    print(BOLD + "+" + left_pad + title_str + right_pad + "+" + END)
-    # create and print information portion
+    # create information portion for printing in the loop
     info_str = "| Released by {:<57} | {:>3} tracks | {:>3} reviews |"
     cursor.execute("SELECT artist_id FROM released_album WHERE album_id=%s", [album_id])
     artist_ids = cursor.fetchall()
@@ -173,11 +176,14 @@ def view_album(username: str, album_id: str) -> None: #FIXME: missing all option
     artist_str += name
     if len(artist_str) > 57:
         artist_str = artist_str[:54] + "..."
-    print(info_str.format(artist_str, album_info[2], 0))
-    print(BOLD + "+" + "-" * 98 + "+" + END)
-    # begin input loop
     user_input = ""
+    cursor.execute("SELECT COUNT(*) FROM review WHERE album_id=%s", [album_id],)
+    num_reviews = cursor.fetchall()[0][0]
+    # begin input loop (and print album info)
     while user_input != "b":
+        print(BOLD + "+" + left_pad + title_str + right_pad + "+" + END)
+        print(info_str.format(artist_str, album_info[2], num_reviews))
+        print(BOLD + "+" + "-" * 98 + "+" + END)
         print(BOLD + "t" + END + ": View tracklist (comment on songs)")
         print(BOLD + "c" + END + ": View cover art")
         print(BOLD + "s" + END + ": Open album in " + GREEN + BOLD + "Spotify" + END)
@@ -193,7 +199,7 @@ def view_album(username: str, album_id: str) -> None: #FIXME: missing all option
         elif user_input == "s":
             webbrowser.open(album_info[3])
         elif user_input == "w":
-            #write_review()
+            write_review(username, album_id, album_info[0])
             pass
         elif user_input == "r":
             #print a bunch of reviews that match the album id
@@ -222,6 +228,113 @@ def create_album(album_id: str) -> None: # FIXME: missing tracks
             cursor.execute("INSERT INTO artist VALUES (%s, %s, %s)", [x["id"], x["name"], x["external_urls"]["spotify"]],)
         cursor.execute("INSERT INTO released_album VALUES (%s, %s)", [x["id"], album_id])
     db.commit()
+
+def write_review(username, album_id, album_name):
+    global cursor, db
+    user_input = ""
+    review_text = ""
+    rating = 0
+    while user_input != "e":
+        print(BOLD + "---Reviewing " + album_name + "---" + END)
+        print("What would you like your review to include?")
+        print(BOLD + "t" + END + ": Text")
+        print(BOLD + "r" + END + ": Rating (from 1-10)")
+        print(BOLD + "b" + END + ": Both text AND a rating")
+        print(BOLD + "e" + END + ": Exit")
+        user_input = input(ITALIC + "Choose an option: " + END)
+        if user_input in ("t", "r", "b"):
+            # get text
+            if user_input in ("t", "b"):
+                print("What would you like to write about the album?")
+                review_text = input(ITALIC + "Write your text below and press enter to submit (or submit an x to omit a text portion).\n" + END)
+                if review_text == "x":
+                    review_text = ""
+            # get rating
+            if user_input in ("r", "b"):
+                print("What rating would you like to give the album?")
+                rating = input(ITALIC + "Enter a number 1-10 (or 0 to omit a rating): " + END)                
+                while (not rating.isdigit()) or (int(rating) < 0) or (int(rating) > 10):
+                    print(RED + "Invalid input entered, please try again." + END)
+                    rating = input(ITALIC + "Enter a number 1-10 (or 0 to omit a rating): " + END)
+                rating = int(rating)
+            # Check that at least one field was used
+            if (review_text or rating):
+                # Preview review
+                print("Here is a preview of your review:")
+                preview_review(username, album_name, rating, review_text)
+                confirm = ""
+                while not (confirm in ("y", "n")):
+                    confirm = input(ITALIC + "Enter y to confirm (or n to abandon this review): " + END)
+                    if not confirm in ("y", "n"):
+                        print(RED + "Invalid input entered, please try again." + END)
+                if confirm == "y":
+                    thedate = date.fromtimestamp(time.time())
+                    thetime = strftime("%H:%M:%S", time.localtime())
+                    if review_text and rating:
+                        cursor.execute("INSERT INTO review (posted_by, album_id, post_date, post_time, rating, body) VALUES (%s, %s, %s, %s, %s, %s)", [username, album_id, thedate, thetime, rating, review_text],)
+                    elif rating:
+                        cursor.execute("INSERT INTO review (posted_by, album_id, post_date, post_time, rating) VALUES (%s, %s, %s, %s, %s)", [username, album_id, thedate, thetime, rating],)
+                    else:
+                        cursor.execute("INSERT INTO review (posted_by, album_id, post_date, post_time, body) VALUES (%s, %s, %s, %s, %s)", [username, album_id, thedate, thetime, review_text],)
+                    db.commit()
+                    print(GREEN + BOLD + "Review successfully created!" + END)
+                    user_input = "e"
+            else:
+                print(RED + "Error: your review must contain text and/or a rating. Please try again." + END)
+        elif user_input != "e":
+            print(RED + "Invalid input entered, please try again." + END)
+            pass
+
+def preview_review(username, album_id, rating, text):
+    print(BOLD + "+" + "-" * 98 + "+" + END)
+    title_str = f"| "
+    # FIXME: implement real info into the title string
+    if rating:
+        rating_color = ""
+        if rating < 4:
+            rating_color = BOLD + UNDERLINE + "\33[41m"
+        elif rating < 7:
+            rating_color = BOLD + UNDERLINE + "\33[43m"
+        else:
+            rating_color = BOLD + UNDERLINE + "\33[42m"
+        title_str = "| albumtitle by artistnames" + " " * 59 + "|{:} Rating: {:>2} " + END + "|"
+        print(title_str.format(rating_color, str(rating)))
+    else:
+        title_str = "| albumtitle by artistnames" + " " * 72 + "|"
+        print(title_str)
+    thedate = date.fromtimestamp(time.time())
+    thetime = strftime("%H:%M:%S", time.localtime())
+
+    # FIXME: Make this line underlined when review text follows, but not otherwise
+    date_time = f"Posted {thetime} {thedate} |"
+    user_data = f"| Review by {username}"
+    numspaces = 100 - len(date_time) - len(user_data)
+    print(user_data + " " * numspaces + date_time)
+    if text:
+        full_text = text.split()
+        lined_text = [""]
+        line = 0
+        lined_text[0] = f" \"{full_text[0]}"
+        for word in full_text[1:-1]:
+            if len(lined_text[line] + " " + word) <= 97:
+                lined_text[line] += " " + word
+            else:
+                lined_text.append(" " + word)
+                line += 1
+        if len(full_text) > 1:
+            if (len(lined_text[line] + " " + full_text[-1]) < 97) and (len(full_text) > 1):
+                lined_text[line] += " " + full_text[-1] + "\""
+            else:
+                lined_text.append(" " + full_text[-1] + "\"")
+        else:
+            lined_text[0] += "\""
+        for l in lined_text:
+            l += " " * (97 - len(l))
+            print("|" + ITALIC + l + END + " |")
+    print(BOLD + "+" + "-" * 98 + "+" + END)
+
+
+
 
 
 def view_user(curr_user, viewed_user):  # FIXME: not functional at all
