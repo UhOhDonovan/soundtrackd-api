@@ -56,3 +56,4 @@ for i in range(10):
     print("Link:", search_results[i]["external_urls"]["spotify"])
 
 print(json.dumps(get_album(search_results[0]["id"], get_token()), indent=2))
+
