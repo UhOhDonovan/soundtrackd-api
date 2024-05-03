@@ -300,7 +300,7 @@ def write_review(username: str, album_id: str, album_name: str) -> None:
             pass
 
 
-def view_user(my_username, viewed_user):  # FIXME: not functional at all
+def view_user(my_username, viewed_user): 
     """When a user is selected, give option to follow or view their posted reviews (maybe also some summary stats)"""
     global cursor, db
     user_input = ""
@@ -312,20 +312,30 @@ def view_user(my_username, viewed_user):  # FIXME: not functional at all
         print(BOLD + "+" + "-" * left_pad + f"User: {viewed_user}" + "-" * right_pad + "+"  + END)
         print("|" + "{:^48}".format(f" {num_reviews} Reviews") + "|" + "{:^49}".format(f"Average Rating: {round(float(avg_rating), 2)}") + "|")
         print(BOLD + "+" + "-" * 98 + "+" + END)
-        print(BOLD + "f" + END + RED + f": Follow {viewed_user}" + END)
+        cursor.execute("SELECT * FROM follows_user WHERE follower=%s and followed=%s", [my_username, viewed_user],)
+        is_following = cursor.fetchall()
+        if not is_following:
+            print(BOLD + "f" + END + f": Follow {viewed_user}")
+        else:
+            print(BOLD + "u" + END + f": Unfollow {viewed_user}")
         print(BOLD + "r" + END + f": View {viewed_user}'s album reviews")
         print(BOLD + "b" + END + ": Back")
         user_input = input(ITALIC + "Choose an option: " + END)
-        if user_input == "f":
-            # cursor.execute("INSERT INTO follows_user")
-            pass
+        if user_input == "f" and not is_following:
+            cursor.execute("INSERT INTO follows_user VALUES (%s, %s)", [my_username, viewed_user],)
+            db.commit()
+            print(BOLD + GREEN + f"Successfully followed {viewed_user}! You will see their reviews in your feed." + END)
+        elif user_input == "u" and is_following:
+            cursor.execute("DELETE FROM follows_user WHERE follower=%s and followed=%s", [my_username, viewed_user],)
+            db.commit()
+            print(BOLD + GREEN + f"Successfully unfollowed {viewed_user}! Their reviews will no longer appear in your feed." + END)
         elif user_input == "r":
             view_other_reviews(my_username, user_id=viewed_user)
         elif user_input != "b":
             print(RED + "Invalid input entered, please try again." + END)
 
 # Finished
-def print_review(r):
+def print_review(r): # FIXME: possibly highlight username if a followed user
     """print a review in a pretty format
     called for each review when a user views their feed, views reviews on an album, or views another user's reviews
     r is a single result from SELECT * FROM review
