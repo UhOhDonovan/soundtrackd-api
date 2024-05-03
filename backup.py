@@ -635,23 +635,43 @@ def register() -> None:
 
 
 if __name__ == "__main__":
-    dbuser = input("Enter your local MySQL username (usually root): ")
-    dbpass = input("Enter your local MySQL password: ")
-    # Conenct to the database (local)
-    try:
-        db = mysql.connector.connect(
-            host="localhost",
-            user=dbuser,
-            passwd=dbpass,
-            database="soundtrackd",
-        )
-    except:
-        print(
-            RED
-            + BOLD
-            + "oops, couldn't connect to database. Make sure your credentials are correct and initialize.sql has been run"
-            + END
-        )
+    use_online = input("Would you like to use the hosted database for Soundtrackd? (enter y if yes): ")
+    if use_online == "y":
+        try:
+            pswd = input("Enter the password for the online database: ")
+            timeout = 10
+            db = mysql.connector.connect(
+                host="soundtrackd-mysql-soundtrackd.d.aivencloud.com",
+                port=27106,
+                user="avnadmin",
+                passwd=pswd,
+                database="defaultdb",
+            )
+        except:
+            print(
+                RED
+                + BOLD
+                + "oops, couldn't connect to database. That's weird"
+                + END
+            )
+    else:
+        dbuser = input("Enter your local MySQL username (usually root): ")
+        dbpass = input("Enter your local MySQL password: ")
+        # Conenct to the database (local)
+        try:
+            db = mysql.connector.connect(
+                host="localhost",
+                user=dbuser,
+                passwd=dbpass,
+                database="soundtrackd",
+            )
+        except:
+            print(
+                RED
+                + BOLD
+                + "oops, couldn't connect to database. Make sure your credentials are correct and initialize.sql has been run"
+                + END
+            )
     cursor = db.cursor()
     user_input = ""
     # Welcome/login/register (home page of the app is entered from within login)
