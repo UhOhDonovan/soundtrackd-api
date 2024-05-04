@@ -64,13 +64,8 @@ def homePage(username: str) -> None:  # FIXME: missing feed
     user_input = ""
     while user_input != "l":
         print(BOLD + "------" + username + "'s " + GREEN + "Soundtrackd" + END + BOLD + " home page------")
-        print(BOLD + "s" + END + ": Search for albums, artists, songs, or users")
-        print(
-            BOLD
-            + "f"
-            + END + RED
-            + ": View your feed (reviews posted by your followed users)" + END
-        )
+        print(BOLD + "s" + END + ": Search for albums, " + RED + "artists, songs, " + END + "or users")
+        print(BOLD + "f" + END + RED + ": View your feed (reviews posted by your followed users)" + END)
         print(BOLD + "r" + END + ": View/edit your posted reviews")
         print(BOLD + "l" + END + ": Log out")
         user_input = input(ITALIC + "Choose an option: " + END)
@@ -84,21 +79,48 @@ def homePage(username: str) -> None:  # FIXME: missing feed
             print(RED + "Invalid input entered, please try again." + END)
 
 
-def search_options(username: str) -> None:  # FIXME: missing user search
+def search_options(username: str) -> None:  # FIXME: Add artist/song search?
     """Print search options, choose what kind of search to do, route to that search"""
     user_input = ""
     while user_input != "b":
         print(BOLD + "What would you like to search for?" + END)
         print(BOLD + "a" + END + ": Search for an album")
-        print(BOLD + "u" + END + RED + ": Search for a user" + END)
+        print(BOLD + "u" + END + ": Search for a user")
         print(BOLD + "b" + END + ": Back")
         user_input = input(ITALIC + "Choose an option: " + END)
         if user_input == "a":
             album_search(username)
         elif user_input == "u":
-            pass
+            user_search(username)
         elif user_input != "b":
             print(RED + "Invalid input entered, please try again." + END)
+
+def user_search(username: str) -> None:
+    """Prompt for an album name, return 10 options from spotify search, allow viewing of each option or starting a new search"""
+    search_str = ""
+    while search_str != "b":
+        # use the spotify web API to search albums (get the first 10 results)
+        print(BOLD + f'---User Search---' + END)
+        search_str = input(ITALIC + "Enter a user's username or email address (or b to go back): " + END)
+        search_str = "%" + search_str + "%"
+        cursor.execute("SELECT username FROM user WHERE ((username LIKE %s) OR (email LIKE %s)) AND (username != %s)", [search_str, search_str, username],)
+        results = cursor.fetchall()
+        user_input = ""
+        search_str = search_str[1:-1]
+        while (user_input not in ("b", "s")) and (search_str != 'b'):
+            print(BOLD + f'---User Search: "{search_str}"---' + END)
+            for i in range(len(results)):
+                print(BOLD + str(i + 1) + END + ": " + UNDERLINE + results[i][0] + END)
+            print(BOLD + "s" + END + ": Search again")
+            print(BOLD + "b" + END + ": Back")
+            user_input = input(ITALIC + "Choose an option: " + END)
+            if user_input.isnumeric() and int(user_input) in range(1, len(results) + 1):
+                view_user(username, results[int(user_input) - 1][0])
+                user_input = ""
+            elif user_input == "b":
+                search_str = "b"
+            elif user_input != "s":
+                print(RED + "Invalid input entered, please try again." + END)
 
 # Finished
 def spotify_search(token: str, type:str , search:str ) -> list:
@@ -123,7 +145,7 @@ def album_search(username: str) -> None:
         search_str = input(ITALIC + "Enter an album name (or b to go back): " + END)
         results = spotify_search(token, "album", search_str)
         user_input = ""
-        while user_input not in ("b", "s"):
+        while (user_input not in ("b", "s")) and (search_str != 'b'):
             print(BOLD + f'---Album Search: "{search_str}"---' + END)
             for i in range(len(results)):
                 print(
