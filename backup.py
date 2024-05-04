@@ -170,7 +170,7 @@ def album_search(username: str) -> None:
                 print(RED + "Invalid input entered, please try again." + END)
 
 
-def view_album(username: str, album_id: str) -> None: #FIXME: missing all options implementations
+def view_album(username: str, album_id: str) -> None: #FIXME: implement tracklist option
     # search for the album in the database. If missing, add it
     cursor.execute("SELECT title, release_date, num_tracks, spotify_link, image_link FROM album WHERE id = %s",[album_id],)
     album_info = cursor.fetchall()
@@ -323,7 +323,7 @@ def write_review(username: str, album_id: str, album_name: str) -> None:
             pass
 
 # Finished except minor visual changes if desired
-def view_user(my_username, viewed_user): 
+def view_user(my_username: str, viewed_user: str) -> None: 
     """When a user is selected, give option to follow or view their posted reviews (maybe also some summary stats)"""
     global cursor, db
     user_input = ""
@@ -358,7 +358,7 @@ def view_user(my_username, viewed_user):
             print(RED + "Invalid input entered, please try again." + END)
 
 # Finished
-def print_review(r): # FIXME: possibly highlight username if a followed user
+def print_review(r: tuple) -> None: # FIXME: possibly highlight username if a followed user
     """print a review in a pretty format
     called for each review when a user views their feed, views reviews on an album, or views another user's reviews
     r is a single result from SELECT * FROM review
@@ -430,7 +430,7 @@ def print_review(r): # FIXME: possibly highlight username if a followed user
     print(BOLD + "+" + "-" * 98 + "+" + END)
 
 
-def view_my_reviews(username): # FIXME: Add comment features
+def view_my_reviews(username: str) -> None: # FIXME: Add review editing
     """print out 5 reviews that match the condition and prompt for a response (exit if none match the condition)"""
     global cursor, db
     offset = 0
@@ -467,8 +467,7 @@ def view_my_reviews(username): # FIXME: Add comment features
                 print(BOLD + "n" + END + ": Nothing")
                 choice = input(ITALIC + "Choose an option: " + END)
                 if choice == "c":
-                    # view_review_comments()
-                    pass
+                    view_comments(username, review_id=review_list[review_index][0])
                 elif choice == "a": # View the reviewed album's page
                     view_album(username, review_list[review_index][2])
                     choice = "n"
@@ -490,7 +489,7 @@ def view_my_reviews(username): # FIXME: Add comment features
         elif (user_input != "b"):
             print(RED + "Invalid input entered, please try again." + END)
 
-def view_other_reviews(my_username, album_id=None, user_id=None, my_feed=False): # FIXME: Add comment features
+def view_other_reviews(my_username: str, album_id=None, user_id=None, my_feed=False) -> None: # add editing if posted the review, combine with view_my
     """print out 5 reviews that given album_id or user_id and prompt for a respnse (exit if none match the condition)"""
     global cursor, db
     offset = 0
@@ -542,12 +541,11 @@ def view_other_reviews(my_username, album_id=None, user_id=None, my_feed=False):
                 print(BOLD + "n" + END + ": Nothing")
                 choice = input(ITALIC + "Choose an option: " + END)
                 if choice == "c":
-                    # view_review_comments()
-                    pass
+                    view_comments(my_username, review_id=review_list[review_index][0])
+                    choice = "n"
                 elif choice == "a": # View the reviewed album's page
                     view_album(my_username, review_list[review_index][2])
                     choice = "n"
-                    pass
                 elif choice == "u": # View the page of the review's author
                     view_user(my_username, review_list[review_index][1])
                     choice = "n"
@@ -560,6 +558,141 @@ def view_other_reviews(my_username, album_id=None, user_id=None, my_feed=False):
             offset -=5
         elif (user_input != "b"):
             print(RED + "Invalid input entered, please try again." + END)
+
+def view_comments(username: str, review_id=None, track_id=None) -> None: # FIXME: Implement editing for reviews written by the user
+    global cursor
+    offset = 0
+    user_input = ""
+    if review_id:
+        variation = "review"
+        item_id = review_id
+    elif track_id:
+        variation = "track"
+        item_id = track_id
+    else:
+        print(BOLD + RED + "Something went wrong" + END)
+    while user_input != "b":
+        cursor.execute(f"SELECT * FROM {variation}_comment WHERE {variation}_id=%s ORDER BY post_date DESC, post_time DESC LIMIT {offset}, 5", [item_id],)
+        comment_list = cursor.fetchall()
+        # Print comments
+        if len(comment_list) == 0:
+            print("-" * 42 + "Nothing to show" + "-" * 43)
+        else:
+            for i in range(len(comment_list)):
+                print("{:^100}".format(f"({i+1})"))
+                print_comment(comment_list[i])
+        # Print options and prompt for selection
+        print(BOLD + UNDERLINE + "Enter a comment's number to select it" + END + BOLD + ", or choose another option." + END)
+        print(BOLD + "w" + END + ": Write a new comment")
+        if(len(comment_list) == 5):
+            print(BOLD + "n" + END + ": Next page")
+        if(offset != 0):
+            print(BOLD + "p" + END + ": Previous page")
+        print(BOLD + "b" + END + ": Back")
+        user_input = input(ITALIC + "Choose an option: " + END)
+        # Handle option selection
+        if user_input.isdigit() and (0 < int(user_input) <= len(comment_list)): # Select a comment, handle more options
+            comment_index = int(user_input) - 1
+            choice = ""
+            while choice != "n":
+                print(BOLD + f"What would you like to do with comment #{comment_index+1}?" + END)
+                if comment_list[comment_index][2] == username:
+                    print(BOLD + "d" + END + ": Delete the comment")
+                print(BOLD + "u" + END + ": View the user's page")
+                print(BOLD + "n" + END + ": Nothing")
+                choice = input(ITALIC + "Choose an option: " + END)
+                if choice == "d" and (comment_list[comment_index][2] == username):
+                    confirm = input(BOLD + RED + ITALIC + f"Are you sure you want to delete comment #{comment_index + 1}?" + END + ITALIC + " Enter y to proceed: " + END)
+                    if(confirm == "y"):
+                        cursor.execute("DELETE FROM review WHERE id=%s", [comment_list[comment_index][0]],)
+                        db.commit()
+                        print(GREEN + BOLD + f"Comment #{comment_index + 1} successfully deleted." + END)
+                    choice = "n"
+                elif choice == "u": # View the page of the comment's author
+                    view_user(username, comment_list[comment_index][2])
+                    choice = "n"
+                elif choice != "n":
+                    print(RED + "Invalid input entered, please try again." + END)
+        elif user_input == "w": # Write a new comment
+            if variation == "review":
+                write_comment(username, review_id=review_id)
+            elif variation == "track":
+                write_comment(username, track_id=track_id)
+        elif (len(comment_list) == 5 and user_input == "n"): # View the next 5 comments
+            offset += 5
+        elif (offset != 0 and user_input == "p"): # View the previous 5 comments
+            offset -=5
+        elif (user_input != "b"):
+            print(RED + "Invalid input entered, please try again." + END)
+
+def write_comment(username: str, review_id=None, track_id=None) -> None:
+    global cursor, db
+    user_input = ""
+    comment_text = ""
+    if review_id:
+        variation = "review"
+        item_id = review_id
+    elif track_id:
+        variation = "track"
+        item_id = track_id
+    else:
+        print(RED + BOLD + "Something went wrong..." + END)
+    while comment_text != "b":
+        print(f"What would you like to write about this {variation}?")
+        comment_text = input(ITALIC + "Write your comment below and press enter to submit (or write \"b\" to go back).\n" + END)
+        # Check that at least one field was used
+        if (not comment_text):
+            print(RED + "Error: your comment must contain text. Please try again." + END)
+        elif (comment_text != "b"):
+            # Preview review
+            print("Here is a preview of your comment:")
+            thedate = date.fromtimestamp(time.time())
+            thetime = strftime("%H:%M:%S", time.localtime())
+            fake_comment = (0, 0, username, thedate, thetime, comment_text)
+            print_comment(fake_comment)
+            # preview_review(username, album_name, rating, review_text)
+            confirm = ""
+            while not (confirm in ("y", "n")):
+                confirm = input(ITALIC + "Enter y to confirm (or n to abandon this comment): " + END)
+                if not confirm in ("y", "n"):
+                    print(RED + "Invalid input entered, please try again." + END)
+            if confirm == "y":
+                thedate = date.fromtimestamp(time.time())
+                thetime = strftime("%H:%M:%S", time.localtime())
+                cursor.execute(f"INSERT INTO {variation}_comment ({variation}_id, posted_by, post_date, post_time, body) VALUES (%s, %s, %s, %s, %s)", [item_id, username, thedate, thetime, comment_text],)
+                db.commit()
+                print(GREEN + BOLD + "Comment successfully created!" + END)
+                comment_text = "b"
+
+
+def print_comment(c: tuple) -> None:
+    comment_id, item_id, posted_by, post_date, post_time, body = c[0], c[1], c[2], c[3], c[4], c[5], 
+    print(BOLD + "+" + "-" * 98 + "+" + END)
+    user_data = f" Comment by {posted_by}"
+    date_time = f"Posted {post_time} {post_date} "
+    numspaces = 98 - len(user_data) - len(date_time)
+    print("|" + UNDERLINE + user_data + " " * numspaces + date_time + END + "|")
+    full_text = body.split()
+    lined_text = [""]
+    line = 0
+    lined_text[0] = f" \"{full_text[0]}"
+    for word in full_text[1:-1]:
+        if len(lined_text[line] + " " + word) <= 97:
+            lined_text[line] += " " + word
+        else:
+            lined_text.append(" " + word)
+            line += 1
+    if len(full_text) > 1:
+        if (len(lined_text[line] + " " + full_text[-1]) < 97) and (len(full_text) > 1):
+            lined_text[line] += " " + full_text[-1] + "\""
+        else:
+            lined_text.append(" " + full_text[-1] + "\"")
+    else:
+        lined_text[0] += "\""
+    for l in lined_text:
+        l += " " * (97 - len(l))
+        print("|" + ITALIC + l + END + " |")
+    print(BOLD + "+" + "-" * 98 + "+" + END)
 
 # Finished
 def login() -> None: 
