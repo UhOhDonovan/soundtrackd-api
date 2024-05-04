@@ -60,19 +60,19 @@ def get_token() -> str:
     return token
 
 
-def homePage(username: str) -> None:  # FIXME: missing feed
+def homePage(username: str) -> None:  # FIXME: decide whether to expand search
     user_input = ""
     while user_input != "l":
         print(BOLD + "------" + username + "'s " + GREEN + "Soundtrackd" + END + BOLD + " home page------")
         print(BOLD + "s" + END + ": Search for albums, " + RED + "artists, songs, " + END + "or users")
-        print(BOLD + "f" + END + RED + ": View your feed (reviews posted by your followed users)" + END)
+        print(BOLD + "f" + END + ": View your feed (reviews posted by your followed users)")
         print(BOLD + "r" + END + ": View/edit your posted reviews")
         print(BOLD + "l" + END + ": Log out")
         user_input = input(ITALIC + "Choose an option: " + END)
         if user_input == "s":
             search_options(username)
         elif user_input == "f":
-            pass
+            view_other_reviews(username, my_feed=True)
         elif user_input == "r":
             view_my_reviews(username)
         elif user_input != "l":
@@ -95,6 +95,7 @@ def search_options(username: str) -> None:  # FIXME: Add artist/song search?
         elif user_input != "b":
             print(RED + "Invalid input entered, please try again." + END)
 
+# Finished
 def user_search(username: str) -> None:
     """Prompt for an album name, return 10 options from spotify search, allow viewing of each option or starting a new search"""
     search_str = ""
@@ -321,7 +322,7 @@ def write_review(username: str, album_id: str, album_name: str) -> None:
             print(RED + "Invalid input entered, please try again." + END)
             pass
 
-
+# Finished except minor visual changes if desired
 def view_user(my_username, viewed_user): 
     """When a user is selected, give option to follow or view their posted reviews (maybe also some summary stats)"""
     global cursor, db
@@ -489,7 +490,7 @@ def view_my_reviews(username): # FIXME: Add comment features
         elif (user_input != "b"):
             print(RED + "Invalid input entered, please try again." + END)
 
-def view_other_reviews(my_username, album_id=None, user_id=None): # FIXME: Add comment features
+def view_other_reviews(my_username, album_id=None, user_id=None, my_feed=False): # FIXME: Add comment features
     """print out 5 reviews that given album_id or user_id and prompt for a respnse (exit if none match the condition)"""
     global cursor, db
     offset = 0
@@ -508,6 +509,9 @@ def view_other_reviews(my_username, album_id=None, user_id=None): # FIXME: Add c
             right_pad = 90 - len(user_id) - left_pad
             print(BOLD + "-" * left_pad + f"{user_id}'s Reviews" + "-" * right_pad + END)
             cursor.execute(f"SELECT * FROM review WHERE posted_by=%s ORDER BY post_date DESC, post_time DESC LIMIT {offset}, 5", [user_id],)
+        elif my_feed:
+            print(BOLD + "-" * 46 + "My Feed" + "-" * 47 + END)
+            cursor.execute(f"SELECT * FROM review r WHERE EXISTS (SELECT * FROM follows_user WHERE follower=%s AND followed=r.posted_by) ORDER BY post_date DESC, post_time DESC LIMIT {offset}, 5", [my_username],)
         else:
             print(RED + "THIS FUNCTION WAS CALLED INCORRECTLY" + END)
         review_list = cursor.fetchall()
