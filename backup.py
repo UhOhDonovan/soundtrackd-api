@@ -8,7 +8,6 @@ import os
 import base64
 import json
 import webbrowser
-import datetime
 from datetime import date
 from time import strftime
 import time
@@ -72,9 +71,9 @@ def homePage(username: str) -> None:  # FIXME: decide whether to expand search
         if user_input == "s":
             search_options(username)
         elif user_input == "f":
-            view_other_reviews(username, my_feed=True)
+            view_reviews(username, my_feed=True)
         elif user_input == "r":
-            view_my_reviews(username)
+            view_reviews(username)
         elif user_input != "l":
             print(RED + "Invalid input entered, please try again." + END)
 
@@ -135,7 +134,7 @@ def spotify_search(token: str, type:str , search:str ) -> list:
     result = json.loads(response.content)[type+"s"]["items"]
     return result
 
-# Finished
+# Finished? Implement view artist and follow artist? implement artist reviews in feed?
 def album_search(username: str) -> None:
     """Prompt for an album name, return 10 options from spotify search, allow viewing of each option or starting a new search"""
     search_str = ""
@@ -235,7 +234,7 @@ def view_album(username: str, album_id: str) -> None: #FIXME: implement tracklis
         elif user_input == "w":
             write_review(username, album_id, album_info[0])
         elif user_input == "r":
-            view_other_reviews(username, album_id=album_id)
+            view_reviews(username, album_id=album_id)
         elif user_input != "b":
             print(RED + "Invalid input entered, please try again." + END)
 
@@ -353,7 +352,7 @@ def view_user(my_username: str, viewed_user: str) -> None:
             db.commit()
             print(BOLD + GREEN + f"Successfully unfollowed {viewed_user}! Their reviews will no longer appear in your feed." + END)
         elif user_input == "r":
-            view_other_reviews(my_username, user_id=viewed_user)
+            view_reviews(my_username, user_id=viewed_user)
         elif user_input != "b":
             print(RED + "Invalid input entered, please try again." + END)
 
@@ -429,90 +428,31 @@ def print_review(r: tuple) -> None: # FIXME: possibly highlight username if a fo
             print("|" + ITALIC + l + END + " |")
     print(BOLD + "+" + "-" * 98 + "+" + END)
 
-
-def view_my_reviews(username: str) -> None: # FIXME: Add review editing
-    """print out 5 reviews that match the condition and prompt for a response (exit if none match the condition)"""
-    global cursor, db
-    offset = 0
-    user_input = ""
-    
-    while user_input != "b":
-        cursor.execute(f"SELECT * FROM review WHERE posted_by=%s ORDER BY post_date DESC, post_time DESC LIMIT {offset}, 5", [username],)
-        review_list = cursor.fetchall()
-        # Print reviews
-        print(BOLD + "-" * 45 + "My Reviews" + "-" * 45 + END)
-        if len(review_list) == 0:
-            print("-" * 42 + "Nothing to show" + "-" * 43)
-        else:
-            for i in range(len(review_list)):
-                print("{:^100}".format(f"({i+1})"))
-                print_review(review_list[i])
-        # Print options and prompt for selection
-        print(BOLD + UNDERLINE + "Enter a review's number to select it" + END + BOLD + ", or choose another option." + END)
-        if(len(review_list) == 5):
-            print(BOLD + "n" + END + ": Next page")
-        if(offset != 0):
-            print(BOLD + "p" + END + ": Previous page")
-        print(BOLD + "b" + END + ": Back")
-        user_input = input(ITALIC + "Choose an option: " + END)
-        # Handle option selection
-        if user_input.isdigit() and (0 < int(user_input) <= len(review_list)): # Select a review, handle more options
-            review_index = int(user_input) - 1
-            choice = ""
-            while choice != "n":
-                print(BOLD + f"What would you like to do with review #{review_index+1}?" + END)
-                print(BOLD + "c" + END + RED + ": View comments" + END)
-                print(BOLD + "a" + END + ": View the album's page")
-                print(BOLD + "d" + END + ": Delete the review")
-                print(BOLD + "n" + END + ": Nothing")
-                choice = input(ITALIC + "Choose an option: " + END)
-                if choice == "c":
-                    view_comments(username, review_id=review_list[review_index][0])
-                elif choice == "a": # View the reviewed album's page
-                    view_album(username, review_list[review_index][2])
-                    choice = "n"
-                    pass
-                elif choice == "d": # Delete the selected review
-                    confirm = input(BOLD + RED + ITALIC + f"Are you sure you want to delete review #{review_index+1}?" + END + ITALIC + " Enter y to proceed: " + END)
-                    if(confirm == "y"):
-                        cursor.execute("DELETE FROM review WHERE id=%s", [review_list[review_index][0]],)
-                        db.commit()
-                        print(GREEN + BOLD + f"Review #{review_index+1} successfully deleted." + END)
-                    choice = "n"
-                elif choice != "n":
-                    print(RED + "Invalid input entered, please try again." + END)
-            pass
-        elif (len(review_list) == 5 and user_input == "n"): # View the next 5 reviews
-            offset += 5
-        elif (offset != 0 and user_input == "p"): # View the previous 5 reviews
-            offset -=5
-        elif (user_input != "b"):
-            print(RED + "Invalid input entered, please try again." + END)
-
-def view_other_reviews(my_username: str, album_id=None, user_id=None, my_feed=False) -> None: # add editing if posted the review, combine with view_my
+def view_reviews(my_username: str, album_id=None, user_id=None, my_feed=False) -> None: # add editing if posted the review
     """print out 5 reviews that given album_id or user_id and prompt for a respnse (exit if none match the condition)"""
     global cursor, db
     offset = 0
     user_input = ""
     
     while user_input != "b":
-        if album_id:
+        if album_id: # View reviews about the given the album_id
             cursor.execute("SELECT title, release_date FROM album WHERE id=%s", [album_id],)
             album_name, release_date = cursor.fetchall()[0]
             left_pad = (81 - len(album_name)) // 2
             right_pad = 81 - len(album_name) - left_pad
             print(BOLD + "-" * left_pad + f"Reviews for {album_name} ({str(release_date)[:4]})" + "-" * right_pad + END)
             cursor.execute(f"SELECT * FROM review WHERE album_id=%s ORDER BY post_date DESC, post_time DESC LIMIT {offset}, 5", [album_id],)
-        elif user_id:
+        elif user_id: # View reviews posted by the given user_id
             left_pad = (90 - len(user_id)) // 2
             right_pad = 90 - len(user_id) - left_pad
             print(BOLD + "-" * left_pad + f"{user_id}'s Reviews" + "-" * right_pad + END)
             cursor.execute(f"SELECT * FROM review WHERE posted_by=%s ORDER BY post_date DESC, post_time DESC LIMIT {offset}, 5", [user_id],)
-        elif my_feed:
+        elif my_feed: # View reviews posted by users the user follows
             print(BOLD + "-" * 46 + "My Feed" + "-" * 47 + END)
             cursor.execute(f"SELECT * FROM review r WHERE EXISTS (SELECT * FROM follows_user WHERE follower=%s AND followed=r.posted_by) ORDER BY post_date DESC, post_time DESC LIMIT {offset}, 5", [my_username],)
-        else:
-            print(RED + "THIS FUNCTION WAS CALLED INCORRECTLY" + END)
+        else: # View reviews posted the user
+            print(BOLD + "-" * 45 + "My Reviews" + "-" * 45 + END)
+            cursor.execute(f"SELECT * FROM review WHERE posted_by=%s ORDER BY post_date DESC, post_time DESC LIMIT {offset}, 5", [my_username],)
         review_list = cursor.fetchall()
         # Print reviews
         if len(review_list) == 0:
@@ -535,15 +475,29 @@ def view_other_reviews(my_username: str, album_id=None, user_id=None, my_feed=Fa
             choice = ""
             while choice != "n":
                 print(BOLD + f"What would you like to do with review #{review_index+1}?" + END)
-                print(BOLD + "c" + END + RED + ": View/write comments" + END)
+                print(BOLD + "c" + END + ": View/write comments")
                 print(BOLD + "a" + END + ": View the album's page")
-                print(BOLD + "u" + END + ": View the user's page")
+                if my_username == review_list[review_index][1]:
+                    print(BOLD + "e" + END + ": Edit the review")
+                    print(BOLD + "d" + END + ": Delete the review")
+                else:
+                    print(BOLD + "u" + END + ": View the user's page")
                 print(BOLD + "n" + END + ": Nothing")
                 choice = input(ITALIC + "Choose an option: " + END)
-                if choice == "c":
+                if choice == "c": # View the review's comments
                     view_comments(my_username, review_id=review_list[review_index][0])
                     choice = "n"
-                elif choice == "a": # View the reviewed album's page
+                elif choice == "e" and my_username == review_list[review_index][1]: # Edit the review (if user posted it)
+                    # edit
+                    pass
+                elif choice == "d" and my_username == review_list[review_index][1]: # Delete the review (if user posted it)
+                    confirm = input(BOLD + RED + ITALIC + f"Are you sure you want to delete review #{review_index+1}?" + END + ITALIC + " Enter y to proceed: " + END)
+                    if(confirm == "y"):
+                        cursor.execute("DELETE FROM review WHERE id=%s", [review_list[review_index][0]],)
+                        db.commit()
+                        print(GREEN + BOLD + f"Review #{review_index+1} successfully deleted." + END)
+                    choice = "n"
+                elif choice == "a" and my_username != review_list[review_index][1]: # View the page of the reviewed album
                     view_album(my_username, review_list[review_index][2])
                     choice = "n"
                 elif choice == "u": # View the page of the review's author
@@ -551,7 +505,6 @@ def view_other_reviews(my_username: str, album_id=None, user_id=None, my_feed=Fa
                     choice = "n"
                 elif choice != "n":
                     print(RED + "Invalid input entered, please try again." + END)
-            pass
         elif (len(review_list) == 5 and user_input == "n"): # View the next 5 reviews
             offset += 5
         elif (offset != 0 and user_input == "p"): # View the previous 5 reviews
@@ -572,7 +525,7 @@ def view_comments(username: str, review_id=None, track_id=None) -> None: # FIXME
     else:
         print(BOLD + RED + "Something went wrong" + END)
     while user_input != "b":
-        cursor.execute(f"SELECT * FROM {variation}_comment WHERE {variation}_id=%s ORDER BY post_date DESC, post_time DESC LIMIT {offset}, 5", [item_id],)
+        cursor.execute(f"SELECT * FROM {variation}_comment WHERE {variation}_id=%s ORDER BY post_date ASC, post_time ASC LIMIT {offset}, 5", [item_id],)
         comment_list = cursor.fetchall()
         # Print comments
         if len(comment_list) == 0:
@@ -654,7 +607,7 @@ def write_comment(username: str, review_id=None, track_id=None) -> None:
             confirm = ""
             while not (confirm in ("y", "n")):
                 confirm = input(ITALIC + "Enter y to confirm (or n to abandon this comment): " + END)
-                if not confirm in ("y", "n"):
+                if not (confirm in ("y", "n")):
                     print(RED + "Invalid input entered, please try again." + END)
             if confirm == "y":
                 thedate = date.fromtimestamp(time.time())
@@ -662,7 +615,7 @@ def write_comment(username: str, review_id=None, track_id=None) -> None:
                 cursor.execute(f"INSERT INTO {variation}_comment ({variation}_id, posted_by, post_date, post_time, body) VALUES (%s, %s, %s, %s, %s)", [item_id, username, thedate, thetime, comment_text],)
                 db.commit()
                 print(GREEN + BOLD + "Comment successfully created!" + END)
-                comment_text = "b"
+            comment_text = "b"
 
 
 def print_comment(c: tuple) -> None:
