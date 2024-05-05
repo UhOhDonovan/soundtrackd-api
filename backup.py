@@ -122,6 +122,86 @@ def user_search(username: str) -> None:
             elif user_input != "s":
                 print(RED + "Invalid input entered, please try again." + END)
 
+
+def artist_search(username):
+    """Prompt for an album name, return 10 options from spotify search, allow viewing of each option or starting a new search"""
+    search_str = ""
+    token = get_token()
+    while search_str != "b":
+        # use the spotify web API to search albums (get the first 10 results)
+        print(BOLD + f'---Artist Search---' + END)
+        search_str = input(ITALIC + "Enter an artist's name (or b to go back): " + END)
+        search_str = search_str
+        results = spotify_search(token, "artist", search_str)
+        user_input = ""
+        while (user_input not in ("b", "s")) and (search_str != 'b'):
+            print(BOLD + f'---Artist Search: "{search_str}"---' + END)
+            for i in range(len(results)):
+                print(BOLD + str(i + 1) + END + ": " + UNDERLINE + results[i]["name"] + END)
+            print(BOLD + "s" + END + ": Search again")
+            print(BOLD + "b" + END + ": Back")
+            user_input = input(ITALIC + "Choose an option: " + END)
+            if user_input.isnumeric() and int(user_input) in range(1, len(results) + 1):
+                view_artist(username, results[int(user_input) - 1]["id"])
+                user_input = ""
+            elif user_input == "b":
+                search_str = "b"
+            elif user_input != "s":
+                print(RED + "Invalid input entered, please try again." + END)
+
+def view_artist(username, artist_id):
+    global cursor, db
+    cursor.execute("SELECT * FROM artist WHERE id=%s", [artist_id],)
+    artist = cursor.fetchall()
+    if not artist:
+        create_artist(artist_id)
+        cursor.execute("SELECT * FROM artist WHERE id=%s", [artist_id],)
+        artist = cursor.fetchall()[0]
+    cursor.execute("SELECT COUNT(*), AVG(rating) FROM review r WHERE EXISTS (SELECT * FROM album WHERE id=r.album_id AND EXISTS (SELECT * FROM released_album WHERE artist_id=%s))", [artist_id])
+    num_reviews, avg_rating = cursor.fetchall()[0]
+    while user_input != "b":
+        left_pad = (92 - len(artist[1])) // 2
+        right_pad = 92 - len(artist[1]) - left_pad
+        print(BOLD + "+" + "-" * left_pad + f"User: {artist[1]}" + "-" * right_pad + "+"  + END)
+        print("|" + "{:^48}".format(f" {num_reviews} Reviews") + "|" + "{:^49}".format(f"Average Rating: {round(float(avg_rating), 2)}") + "|")
+        print(BOLD + "+" + "-" * 98 + "+" + END)
+        cursor.execute("SELECT * FROM follows_artist WHERE user_id=%s and artist_id=%s", [username, artist_id],)
+        is_following = cursor.fetchall()
+        if not is_following:
+            print(BOLD + "f" + END + f": Follow {artist[1]}")
+        else:
+            print(BOLD + "u" + END + f": Unfollow {artist[1]}")
+        print(BOLD + "r" + END + f": View reviews for {artist[1]}'s albums")
+        print(BOLD + "b" + END + ": Back")
+        user_input = input(ITALIC + "Choose an option: " + END)
+        if user_input == "f" and not is_following:
+            cursor.execute("INSERT INTO follows_artist VALUES (%s, %s)", [username, artist_id],)
+            db.commit()
+            print(BOLD + GREEN + f"Successfully followed {artist[1]}! You will see their reviews in your feed." + END)
+        elif user_input == "u" and is_following:
+            cursor.execute("DELETE FROM follows_artist WHERE follower=%s and followed=%s", [username, artist_id],)
+            db.commit()
+            print(BOLD + GREEN + f"Successfully unfollowed {artist[1]}! Their reviews will no longer appear in your feed." + END)
+        elif user_input == "r":
+            view_reviews(username, artist_id=artist_id)
+        elif user_input != "b":
+            print(RED + "Invalid input entered, please try again." + END)
+    
+    
+
+def create_artist(artist_id: str) -> None:
+    """Transfer artist information from Spotify API to the database"""
+    global db, cursor
+    print("Retrieving data from " + GREEN + BOLD + "Spotify" + END + "...")
+    token = get_token()
+    url = f"https://api.spotify.com/v1/artists/{artist_id}"
+    headers = {"Authorization": "Bearer " + token}
+    response = get(url, headers=headers)
+    album = json.loads(response.content)
+
+    cursor.execute("INSERT INTO artist VALUES (%s, %s, %s)", [artist_id, album["name"], album["external_urls"]["spotify"]],)
+    db.commit()  
+
 # Finished
 def spotify_search(token: str, type:str , search:str ) -> list:
     """Uses the Spotify web API to return 10 search results of the given type relating to the search string"""
@@ -507,7 +587,7 @@ def print_review(r: tuple) -> None: # FIXME: possibly highlight username if a fo
     print(BOLD + "+" + "-" * 98 + "+" + END)
 
 # Finished
-def view_reviews(my_username: str, album_id=None, user_id=None, my_feed=False) -> None:
+def view_reviews(my_username: str, album_id=None, user_id=None, artist_id=None, my_feed=False) -> None: # FIXME: implement artistID
     """print out 5 reviews that given album_id or user_id and prompt for a respnse (exit if none match the condition)"""
     global cursor, db
     offset = 0
@@ -526,6 +606,9 @@ def view_reviews(my_username: str, album_id=None, user_id=None, my_feed=False) -
             right_pad = 90 - len(user_id) - left_pad
             print(BOLD + "-" * left_pad + f"{user_id}'s Reviews" + "-" * right_pad + END)
             cursor.execute(f"SELECT * FROM review WHERE posted_by=%s ORDER BY post_date DESC, post_time DESC LIMIT {offset}, 5", [user_id],)
+        elif artist_id:
+            left_pad = (90 - len(user_id)) // 2
+            right_pad = 90 - len(user_id) - left_pad
         elif my_feed: # View reviews posted by users the user follows
             print(BOLD + "-" * 46 + "My Feed" + "-" * 47 + END)
             cursor.execute(f"SELECT * FROM review r WHERE EXISTS (SELECT * FROM follows_user WHERE follower=%s AND followed=r.posted_by) ORDER BY post_date DESC, post_time DESC LIMIT {offset}, 5", [my_username],)
