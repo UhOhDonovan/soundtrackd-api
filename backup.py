@@ -134,7 +134,7 @@ def spotify_search(token: str, type:str , search:str ) -> list:
     result = json.loads(response.content)[type+"s"]["items"]
     return result
 
-# Finished? Implement view artist and follow artist? implement artist reviews in feed?
+# Finished? Implement view artist and follow artist? implement reviews about followed artists in the feed?
 def album_search(username: str) -> None:
     """Prompt for an album name, return 10 options from spotify search, allow viewing of each option or starting a new search"""
     search_str = ""
@@ -169,7 +169,7 @@ def album_search(username: str) -> None:
                 print(RED + "Invalid input entered, please try again." + END)
 
 
-def view_album(username: str, album_id: str) -> None: #FIXME: implement tracklist option
+def view_album(username: str, album_id: str) -> None: #FIXME: add view artist option
     # search for the album in the database. If missing, add it
     cursor.execute("SELECT title, release_date, num_tracks, spotify_link, image_link FROM album WHERE id = %s",[album_id],)
     album_info = cursor.fetchall()
@@ -217,7 +217,7 @@ def view_album(username: str, album_id: str) -> None: #FIXME: implement tracklis
         print(BOLD + "+" + left_pad + title_str + right_pad + "+" + END)
         print(info_str.format(artist_str, album_info[2], num_reviews, avg_rating))
         print(BOLD + "+" + "-" * 98 + "+" + END)
-        print(BOLD + "t" + END + RED + ": View tracklist (comment on songs)" + END)
+        print(BOLD + "t" + END + ": View tracklist (view/write comments)")
         print(BOLD + "c" + END + ": View cover art")
         print(BOLD + "s" + END + ": Open album in " + GREEN + BOLD + "Spotify" + END)
         print(BOLD + "w" + END + ": Write an album review")
@@ -225,8 +225,7 @@ def view_album(username: str, album_id: str) -> None: #FIXME: implement tracklis
         print(BOLD + "b" + END + ": Back")
         user_input = input(ITALIC + "Choose an option: " + END)
         if user_input == "t":
-            #view tracklist
-            pass
+            view_tracklist(username, album_id, title_str)
         elif user_input == "c":
             webbrowser.open(album_info[4])
         elif user_input == "s":
@@ -238,8 +237,8 @@ def view_album(username: str, album_id: str) -> None: #FIXME: implement tracklis
         elif user_input != "b":
             print(RED + "Invalid input entered, please try again." + END)
 
-
-def create_album(album_id: str) -> None: # FIXME: missing tracks
+# Finished
+def create_album(album_id: str) -> None:
     """Transfer album/artist information from Spotify API to the database"""
     global db, cursor
     print("Retrieving data from " + GREEN + BOLD + "Spotify" + END + "...")
@@ -258,6 +257,18 @@ def create_album(album_id: str) -> None: # FIXME: missing tracks
         if not cursor.fetchall():
             cursor.execute("INSERT INTO artist VALUES (%s, %s, %s)", [x["id"], x["name"], x["external_urls"]["spotify"]],)
         cursor.execute("INSERT INTO released_album VALUES (%s, %s)", [x["id"], album_id])
+    # add tracks and their artists to database if not there already
+    for t in album["tracks"]["items"]:
+        cursor.execute("SELECT * FROM track WHERE id=%s", [t["id"]],)
+        if not cursor.fetchall():
+            cursor.execute("INSERT INTO track VALUES (%s, %s, %s)", [t["id"], t["name"], t["external_urls"]["spotify"]])
+        cursor.execute("INSERT INTO appears_on VALUES (%s, %s, %s)", [t["id"], album_id, t["track_number"]])
+        for a in t["artists"]:
+            # Add artist to database if not there already
+            cursor.execute("SELECT * FROM artist WHERE id=%s", [a["id"]],)
+            if not cursor.fetchall():
+                cursor.execute("INSERT INTO artist VALUES (%s, %s, %s)", [a["id"], a["name"], a["external_urls"]["spotify"]],)
+            cursor.execute("INSERT INTO released_track VALUES (%s, %s)", [a["id"], t["id"]])
     db.commit()
 
 # Finished
@@ -319,7 +330,74 @@ def write_review(username: str, album_id: str, album_name: str) -> None:
                 print(RED + "Error: your review must contain text and/or a rating. Please try again." + END)
         elif user_input != "e":
             print(RED + "Invalid input entered, please try again." + END)
-            pass
+
+# Finished (except maybe better commenting)
+def edit_review(r) -> None:
+    # r is a review from the db
+    global cursor, db
+    r_id, posted_by, album_id, post_date, post_time, rating, body = r
+    user_input = ""
+    new_body = ""
+    new_rating = 0
+    while user_input != "e":
+        print("What would you like edit/add?")
+        print(BOLD + "t" + END + ": Text")
+        print(BOLD + "r" + END + ": Rating (from 1-10)")
+        print(BOLD + "e" + END + ": Exit")
+        user_input = input(ITALIC + "Choose an option: " + END)
+        if user_input == "t":
+            print("What would you like to write about the album?")
+            print("(Previous text: \"" + body + "\")")
+            new_body = input(ITALIC + "Write your text below and press enter to submit (or submit an x to omit a text portion).\n" + END)
+            if new_body == "x":
+                new_body = ""
+            if (not new_body) and (not rating):
+                print(RED + BOLD + "Error: Your review must have text or a rating. Abandoning changes. \n(If you want to delete your review, use the previous menu)" + END)
+                user_input = ""
+            else:
+                print("Here is a preview of your edited review:")
+                fake_review = (0, posted_by, album_id, post_date, post_time, rating, new_body)
+                print_review(fake_review)
+                confirm = ""
+                while not (confirm in ("y", "n")):
+                    confirm = input(ITALIC + "Enter y to confirm (or n to abandon this change): " + END)
+                    if not confirm in ("y", "n"):
+                        print(RED + "Invalid input entered, please try again." + END)
+                if confirm == "y":
+                    cursor.execute("UPDATE review SET body=%s WHERE id=%s", [new_body, r_id],)
+                    db.commit()
+                    body = new_body
+                    print(GREEN + BOLD + "Review successfully edited!" + END)
+                    user_input = ""
+        # get rating
+        elif user_input == "r":
+            print("What rating would you like to give the album?")
+            print("(Previous rating: " + str(rating) + ")")
+            new_rating = input(ITALIC + "Enter a number 1-10 (or 0 to omit a rating): " + END)                
+            while (not new_rating.isdigit()) or (int(new_rating) < 0) or (int(new_rating) > 10):
+                print(RED + "Invalid input entered, please try again." + END)
+                new_rating = input(ITALIC + "Enter a number 1-10 (or 0 to omit a rating): " + END)
+            new_rating = int(new_rating)
+            if (not new_rating) and (not body):
+                print(RED + BOLD + "Error: Your review must have text or a rating. Abandoning changes.\n(If you want to delete your review, use the previous menu)" + END)
+                user_input = ""
+            else:
+                print("Here is a preview of your edited review:")
+                fake_review = (0, posted_by, album_id, post_date, post_time, new_rating, body)
+                print_review(fake_review)
+                confirm = ""
+                while not (confirm in ("y", "n")):
+                    confirm = input(ITALIC + "Enter y to confirm (or n to abandon this change): " + END)
+                    if not confirm in ("y", "n"):
+                        print(RED + "Invalid input entered, please try again." + END)
+                if confirm == "y":
+                    cursor.execute("UPDATE review SET rating=%s WHERE id=%s", [new_rating, r_id],)
+                    db.commit()
+                    rating = new_rating
+                    print(GREEN + BOLD + "Review successfully edited!" + END)
+                    user_input = ""
+        elif user_input != "e":
+            print(RED + "Invalid input entered, please try again." + END)
 
 # Finished except minor visual changes if desired
 def view_user(my_username: str, viewed_user: str) -> None: 
@@ -428,7 +506,8 @@ def print_review(r: tuple) -> None: # FIXME: possibly highlight username if a fo
             print("|" + ITALIC + l + END + " |")
     print(BOLD + "+" + "-" * 98 + "+" + END)
 
-def view_reviews(my_username: str, album_id=None, user_id=None, my_feed=False) -> None: # add editing if posted the review
+# Finished
+def view_reviews(my_username: str, album_id=None, user_id=None, my_feed=False) -> None:
     """print out 5 reviews that given album_id or user_id and prompt for a respnse (exit if none match the condition)"""
     global cursor, db
     offset = 0
@@ -488,8 +567,8 @@ def view_reviews(my_username: str, album_id=None, user_id=None, my_feed=False) -
                     view_comments(my_username, review_id=review_list[review_index][0])
                     choice = "n"
                 elif choice == "e" and my_username == review_list[review_index][1]: # Edit the review (if user posted it)
-                    # edit
-                    pass
+                    edit_review(review_list[review_index])
+                    choice = "n"
                 elif choice == "d" and my_username == review_list[review_index][1]: # Delete the review (if user posted it)
                     confirm = input(BOLD + RED + ITALIC + f"Are you sure you want to delete review #{review_index+1}?" + END + ITALIC + " Enter y to proceed: " + END)
                     if(confirm == "y"):
@@ -512,7 +591,8 @@ def view_reviews(my_username: str, album_id=None, user_id=None, my_feed=False) -
         elif (user_input != "b"):
             print(RED + "Invalid input entered, please try again." + END)
 
-def view_comments(username: str, review_id=None, track_id=None) -> None: # FIXME: Implement editing for reviews written by the user
+# Finished
+def view_comments(username: str, review_id=None, track_id=None) -> None:
     global cursor
     offset = 0
     user_input = ""
@@ -551,7 +631,8 @@ def view_comments(username: str, review_id=None, track_id=None) -> None: # FIXME
                 print(BOLD + f"What would you like to do with comment #{comment_index+1}?" + END)
                 if comment_list[comment_index][2] == username:
                     print(BOLD + "d" + END + ": Delete the comment")
-                print(BOLD + "u" + END + ": View the user's page")
+                else:
+                    print(BOLD + "u" + END + ": View the user's page")
                 print(BOLD + "n" + END + ": Nothing")
                 choice = input(ITALIC + "Choose an option: " + END)
                 if choice == "d" and (comment_list[comment_index][2] == username):
@@ -561,7 +642,7 @@ def view_comments(username: str, review_id=None, track_id=None) -> None: # FIXME
                         db.commit()
                         print(GREEN + BOLD + f"Comment #{comment_index + 1} successfully deleted." + END)
                     choice = "n"
-                elif choice == "u": # View the page of the comment's author
+                elif choice == "u" and (comment_list[comment_index][2] != username): # View the page of the comment's author
                     view_user(username, comment_list[comment_index][2])
                     choice = "n"
                 elif choice != "n":
@@ -578,6 +659,7 @@ def view_comments(username: str, review_id=None, track_id=None) -> None: # FIXME
         elif (user_input != "b"):
             print(RED + "Invalid input entered, please try again." + END)
 
+# Finished
 def write_comment(username: str, review_id=None, track_id=None) -> None:
     global cursor, db
     user_input = ""
@@ -617,7 +699,7 @@ def write_comment(username: str, review_id=None, track_id=None) -> None:
                 print(GREEN + BOLD + "Comment successfully created!" + END)
             comment_text = "b"
 
-
+# Finished
 def print_comment(c: tuple) -> None:
     comment_id, item_id, posted_by, post_date, post_time, body = c[0], c[1], c[2], c[3], c[4], c[5], 
     print(BOLD + "+" + "-" * 98 + "+" + END)
@@ -646,6 +728,45 @@ def print_comment(c: tuple) -> None:
         l += " " * (97 - len(l))
         print("|" + ITALIC + l + END + " |")
     print(BOLD + "+" + "-" * 98 + "+" + END)
+
+# Finished
+def view_tracklist(username, album_id, album_name_str):
+    print(BOLD + f"---Viewing tracklist for {album_name_str}---" + END)
+    cursor.execute("SELECT * FROM track t WHERE EXISTS (SELECT * FROM appears_on a WHERE track_id=t.id AND album_id=%s)", [album_id])
+    unordered_tracks = cursor.fetchall()
+    tracks = [None] * len(unordered_tracks)
+    for t in unordered_tracks:
+        cursor.execute("SELECT track_num FROM appears_on WHERE track_id=%s", [t[0]],)
+        track_num = cursor.fetchall()[0][0]
+        tracks[track_num - 1] = t
+    user_input=""
+    while user_input != "b":
+        for i in range(len(tracks)):
+            # Get track name
+            name_str = BOLD + f"{i+1}. " + END + tracks[i][1]
+            if len(name_str) > 50:
+                name_str = name_str[:49] + "…"
+            # Get artist name(s)
+            cursor.execute("SELECT name FROM artist a WHERE EXISTS (SELECT * FROM released_track WHERE (track_id=%s and artist_id=a.id))", [tracks[i][0]])
+            artist_names = cursor.fetchall()
+            artist_str = ''
+            for i in range(len(artist_names) - 1):
+                artist_str += artist_names[i][0] + ", "
+            artist_str += artist_names[-1][0]
+            if len(artist_str) > 38:
+                artist_str = artist_str[:37] + "…"
+            # get num comments
+            cursor.execute("SELECT * FROM track_comment WHERE track_id=%s", [tracks[i][0]])
+            num_comments = len(cursor.fetchall())
+            # print
+            print("{:<50} by {:<38} - comments: {:}".format(name_str, artist_str, num_comments))
+    
+        user_input = input(ITALIC + "Enter a track's number to view/write comments (or b to go back): " + END)
+        if user_input.isnumeric() and int(user_input) in range(1, len(tracks) + 1):
+            view_comments(username, track_id=tracks[int(user_input) - 1][0])
+            user_input = ""
+        elif user_input != "b":
+            print(RED + "Invalid input entered, please try again." + END)
 
 # Finished
 def login() -> None: 
@@ -756,12 +877,6 @@ def register() -> None:
             )
         else:  # Collect password
             while (len(password) < 4) and not done:
-                """print(
-                    ITALIC
-                    + "Enter a password that is 4 or more non-whitespace characters long (or e to exit): "
-                    + END,
-                    end="",
-                )"""
                 password = getpass.getpass(
                     ITALIC
                     + "Enter a password that is 4 or more non-whitespace characters long (or e to exit): "
@@ -786,10 +901,6 @@ def register() -> None:
                     )
                     password = ""
                 else:  # Confirm password
-                    """print(
-                        ITALIC + "Please re-enter your password to confirm it: " + END,
-                        end="",
-                    )"""
                     re_entered = getpass.getpass(
                         ITALIC + "Please re-enter your password to confirm it: " + END
                     )
