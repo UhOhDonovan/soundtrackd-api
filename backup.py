@@ -761,7 +761,9 @@ def view_user(my_username: str, viewed_user: str) -> None:
             "|"
             + "{:^48}".format(f" {num_reviews} Reviews")
             + "|"
-            + "{:^49}".format(f"Average Rating: {round(float(avg_rating), 2)}")
+            + "{:^49}".format(
+                f"Average Rating: {'X' if not avg_rating else round(float(avg_rating), 2)}"
+            )
             + "|"
         )
         print(BOLD + "+" + "-" * 98 + "+" + END)
