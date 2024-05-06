@@ -2,4 +2,4 @@
 
 [Pip packages](requirements.txt)
 
-Python version: 3.10.4
+Python version: 3.11.7
