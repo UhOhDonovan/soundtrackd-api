@@ -43,7 +43,7 @@ main.load_dotenv()
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
-# finished
+
 def get_token() -> str:
     """Retrieve access token for Spotify API (expires after 1 hour)"""
     authorization_str = (CLIENT_ID + ":" + CLIENT_SECRET).encode("utf-8")
@@ -59,12 +59,14 @@ def get_token() -> str:
     return token
 
 
-def homePage(username: str) -> None:  # FIXME: decide whether to expand search
+def homePage(username: str) -> None:
+    """Home page for a user after signing in, allows navigating to search, feeds, posted reviews, and logging out."""
     user_input = ""
     while user_input != "l":
         print(BOLD + "------" + username + "'s " + GREEN + "Soundtrackd" + END + BOLD + " home page------")
-        print(BOLD + "s" + END + ": Search for albums, " + RED + "artists, songs, " + END + "or users")
+        print(BOLD + "s" + END + ": Search for albums, artists, or users")
         print(BOLD + "f" + END + ": View your feed (reviews posted by your followed users)")
+        print(BOLD + "a" + END + ": View your artist feed (reviews about your followed artist's albums)")
         print(BOLD + "r" + END + ": View/edit your posted reviews")
         print(BOLD + "l" + END + ": Log out")
         user_input = input(ITALIC + "Choose an option: " + END)
@@ -72,29 +74,34 @@ def homePage(username: str) -> None:  # FIXME: decide whether to expand search
             search_options(username)
         elif user_input == "f":
             view_reviews(username, my_feed=True)
+        elif user_input == "a":
+            view_reviews(username, artist_feed=True)
         elif user_input == "r":
             view_reviews(username)
         elif user_input != "l":
             print(RED + "Invalid input entered, please try again." + END)
 
 
-def search_options(username: str) -> None:  # FIXME: Add artist/song search?
+def search_options(username: str) -> None:
     """Print search options, choose what kind of search to do, route to that search"""
     user_input = ""
     while user_input != "b":
         print(BOLD + "What would you like to search for?" + END)
         print(BOLD + "a" + END + ": Search for an album")
+        print(BOLD + "r" + END + ": Search for an artist")
         print(BOLD + "u" + END + ": Search for a user")
         print(BOLD + "b" + END + ": Back")
         user_input = input(ITALIC + "Choose an option: " + END)
         if user_input == "a":
             album_search(username)
+        elif user_input == "r":
+            artist_search(username)
         elif user_input == "u":
             user_search(username)
         elif user_input != "b":
             print(RED + "Invalid input entered, please try again." + END)
 
-# Finished
+
 def user_search(username: str) -> None:
     """Prompt for an album name, return 10 options from spotify search, allow viewing of each option or starting a new search"""
     search_str = ""
@@ -122,7 +129,7 @@ def user_search(username: str) -> None:
             elif user_input != "s":
                 print(RED + "Invalid input entered, please try again." + END)
 
-
+# Finished
 def artist_search(username):
     """Prompt for an album name, return 10 options from spotify search, allow viewing of each option or starting a new search"""
     search_str = ""
@@ -149,20 +156,23 @@ def artist_search(username):
             elif user_input != "s":
                 print(RED + "Invalid input entered, please try again." + END)
 
-def view_artist(username, artist_id):
+# Finished
+def view_artist(username: str, artist_id: str):
+    """View the page of an artist with an id matching artist_id, allow following/unfollowing, and seeing reviews about the artist"""
     global cursor, db
+    user_input = ""
     cursor.execute("SELECT * FROM artist WHERE id=%s", [artist_id],)
-    artist = cursor.fetchall()
+    artist = cursor.fetchall()[0]
     if not artist:
         create_artist(artist_id)
         cursor.execute("SELECT * FROM artist WHERE id=%s", [artist_id],)
         artist = cursor.fetchall()[0]
-    cursor.execute("SELECT COUNT(*), AVG(rating) FROM review r WHERE EXISTS (SELECT * FROM album WHERE id=r.album_id AND EXISTS (SELECT * FROM released_album WHERE artist_id=%s))", [artist_id])
+    cursor.execute("SELECT COUNT(*), AVG(rating) FROM review WHERE EXISTS (SELECT * FROM album a WHERE a.id=album_id AND EXISTS (SELECT * FROM released_album WHERE album_id=a.id AND artist_id=%s))", [artist_id])
     num_reviews, avg_rating = cursor.fetchall()[0]
     while user_input != "b":
-        left_pad = (92 - len(artist[1])) // 2
-        right_pad = 92 - len(artist[1]) - left_pad
-        print(BOLD + "+" + "-" * left_pad + f"User: {artist[1]}" + "-" * right_pad + "+"  + END)
+        left_pad = (90 - len(artist[1])) // 2
+        right_pad = 90 - len(artist[1]) - left_pad
+        print(BOLD + "+" + "-" * left_pad + f"Artist: {artist[1]}" + "-" * right_pad + "+"  + END)
         print("|" + "{:^48}".format(f" {num_reviews} Reviews") + "|" + "{:^49}".format(f"Average Rating: {round(float(avg_rating), 2)}") + "|")
         print(BOLD + "+" + "-" * 98 + "+" + END)
         cursor.execute("SELECT * FROM follows_artist WHERE user_id=%s and artist_id=%s", [username, artist_id],)
@@ -179,7 +189,7 @@ def view_artist(username, artist_id):
             db.commit()
             print(BOLD + GREEN + f"Successfully followed {artist[1]}! You will see their reviews in your feed." + END)
         elif user_input == "u" and is_following:
-            cursor.execute("DELETE FROM follows_artist WHERE follower=%s and followed=%s", [username, artist_id],)
+            cursor.execute("DELETE FROM follows_artist WHERE user_id=%s and artist_id=%s", [username, artist_id],)
             db.commit()
             print(BOLD + GREEN + f"Successfully unfollowed {artist[1]}! Their reviews will no longer appear in your feed." + END)
         elif user_input == "r":
@@ -188,7 +198,7 @@ def view_artist(username, artist_id):
             print(RED + "Invalid input entered, please try again." + END)
     
     
-
+# Finished
 def create_artist(artist_id: str) -> None:
     """Transfer artist information from Spotify API to the database"""
     global db, cursor
@@ -223,7 +233,8 @@ def album_search(username: str) -> None:
         # use the spotify web API to search albums (get the first 10 results)
         print(BOLD + f'---Album Search---' + END)
         search_str = input(ITALIC + "Enter an album name (or b to go back): " + END)
-        results = spotify_search(token, "album", search_str)
+        if search_str != 'b':
+            results = spotify_search(token, "album", search_str)
         user_input = ""
         while (user_input not in ("b", "s")) and (search_str != 'b'):
             print(BOLD + f'---Album Search: "{search_str}"---' + END)
@@ -249,7 +260,8 @@ def album_search(username: str) -> None:
                 print(RED + "Invalid input entered, please try again." + END)
 
 
-def view_album(username: str, album_id: str) -> None: #FIXME: add view artist option
+def view_album(username: str, album_id: str) -> None:
+    """View an album's page from database info (adding the information from spotify if it is missing). Allow reviewing, viewing reviews, and commenting on tracks."""
     # search for the album in the database. If missing, add it
     cursor.execute("SELECT title, release_date, num_tracks, spotify_link, image_link FROM album WHERE id = %s",[album_id],)
     album_info = cursor.fetchall()
@@ -319,7 +331,7 @@ def view_album(username: str, album_id: str) -> None: #FIXME: add view artist op
 
 # Finished
 def create_album(album_id: str) -> None:
-    """Transfer album/artist information from Spotify API to the database"""
+    """Transfer album/artist information from the Spotify Web API to the database"""
     global db, cursor
     print("Retrieving data from " + GREEN + BOLD + "Spotify" + END + "...")
     token = get_token()
@@ -353,6 +365,7 @@ def create_album(album_id: str) -> None:
 
 # Finished
 def write_review(username: str, album_id: str, album_name: str) -> None:
+    """Prompt for categories to write a review about an album, check that they meet the requirements, post the review."""
     global cursor, db
     user_input = ""
     review_text = ""
@@ -413,6 +426,7 @@ def write_review(username: str, album_id: str, album_name: str) -> None:
 
 # Finished (except maybe better commenting)
 def edit_review(r) -> None:
+    """Prompt to modify the fields of an existing review (checked to match conditions), update the review."""
     # r is a review from the db
     global cursor, db
     r_id, posted_by, album_id, post_date, post_time, rating, body = r
@@ -481,7 +495,7 @@ def edit_review(r) -> None:
 
 # Finished except minor visual changes if desired
 def view_user(my_username: str, viewed_user: str) -> None: 
-    """When a user is selected, give option to follow or view their posted reviews (maybe also some summary stats)"""
+    """When a user is selected, give option to follow them or view their posted reviews (maybe also some summary stats)"""
     global cursor, db
     user_input = ""
     cursor.execute("SELECT COUNT(*), AVG(rating) FROM review WHERE posted_by=%s", [viewed_user])
@@ -516,9 +530,9 @@ def view_user(my_username: str, viewed_user: str) -> None:
 
 # Finished
 def print_review(r: tuple) -> None: # FIXME: possibly highlight username if a followed user
-    """print a review in a pretty format
-    called for each review when a user views their feed, views reviews on an album, or views another user's reviews
-    r is a single result from SELECT * FROM review
+    """print a review in a pretty format.
+    Called for each review when a user views their feed, views reviews on an album, or views another user's reviews.
+    r is a single result from SELECT * FROM review.
     """
     id, posted_by, album_id, post_date, post_time, rating, body = r[0], r[1], r[2], r[3], r[4], r[5], r[6], 
     print(BOLD + "+" + "-" * 98 + "+" + END)
@@ -587,8 +601,9 @@ def print_review(r: tuple) -> None: # FIXME: possibly highlight username if a fo
     print(BOLD + "+" + "-" * 98 + "+" + END)
 
 # Finished
-def view_reviews(my_username: str, album_id=None, user_id=None, artist_id=None, my_feed=False) -> None: # FIXME: implement artistID
-    """print out 5 reviews that given album_id or user_id and prompt for a respnse (exit if none match the condition)"""
+def view_reviews(my_username: str, album_id=None, user_id=None, artist_id=None, artist_feed=False, my_feed=False) -> None: # FIXME: implement artistID
+    """Print out 5 reviews that match the given parameter.
+    NOTE: Only one my_username and one other parameter should be given. If only my_username, it prints reviews created by that user."""
     global cursor, db
     offset = 0
     user_input = ""
@@ -606,12 +621,19 @@ def view_reviews(my_username: str, album_id=None, user_id=None, artist_id=None, 
             right_pad = 90 - len(user_id) - left_pad
             print(BOLD + "-" * left_pad + f"{user_id}'s Reviews" + "-" * right_pad + END)
             cursor.execute(f"SELECT * FROM review WHERE posted_by=%s ORDER BY post_date DESC, post_time DESC LIMIT {offset}, 5", [user_id],)
-        elif artist_id:
-            left_pad = (90 - len(user_id)) // 2
-            right_pad = 90 - len(user_id) - left_pad
+        elif artist_id: # View reviews about an artist's albums
+            cursor.execute("SELECT name FROM artist WHERE id=%s", [artist_id],)
+            artist_name = cursor.fetchall()[0][0]
+            left_pad = (79 - len(artist_name)) // 2
+            right_pad = 79 - len(artist_name) - left_pad
+            print(BOLD +"-" * left_pad + f"Reviews for {artist_name}'s Albums" + "-" * right_pad + END)
+            cursor.execute(f"SELECT * FROM review WHERE EXISTS (SELECT * FROM album a WHERE a.id=album_id AND EXISTS (SELECT * FROM released_album WHERE album_id=a.id AND artist_id=%s)) ORDER BY post_date DESC, post_time DESC LIMIT {offset}, 5", [artist_id],)
         elif my_feed: # View reviews posted by users the user follows
             print(BOLD + "-" * 46 + "My Feed" + "-" * 47 + END)
             cursor.execute(f"SELECT * FROM review r WHERE EXISTS (SELECT * FROM follows_user WHERE follower=%s AND followed=r.posted_by) ORDER BY post_date DESC, post_time DESC LIMIT {offset}, 5", [my_username],)
+        elif artist_feed: # View reviews about albums by artists the user follows
+            print(BOLD + "-" * 43 + "My Artist Feed" + "-" * 43 + END)
+            cursor.execute(f"SELECT * FROM review WHERE EXISTS (SELECT * FROM album a WHERE a.id=album_id AND EXISTS (SELECT * FROM released_album r WHERE album_id=a.id AND EXISTS (SELECT * FROM follows_artist f WHERE user_id=%s AND f.artist_id=r.artist_id))) ORDER BY post_date DESC, post_time DESC LIMIT {offset}, 5", [my_username],)
         else: # View reviews posted the user
             print(BOLD + "-" * 45 + "My Reviews" + "-" * 45 + END)
             cursor.execute(f"SELECT * FROM review WHERE posted_by=%s ORDER BY post_date DESC, post_time DESC LIMIT {offset}, 5", [my_username],)
@@ -676,6 +698,7 @@ def view_reviews(my_username: str, album_id=None, user_id=None, artist_id=None, 
 
 # Finished
 def view_comments(username: str, review_id=None, track_id=None) -> None:
+    """Print the most recent 5 comments posted about a given album review or track, prompt for switching to the next page."""
     global cursor
     offset = 0
     user_input = ""
@@ -744,6 +767,7 @@ def view_comments(username: str, review_id=None, track_id=None) -> None:
 
 # Finished
 def write_comment(username: str, review_id=None, track_id=None) -> None:
+    """Prompt for writing a comment about a given review or track."""
     global cursor, db
     user_input = ""
     comment_text = ""
@@ -784,6 +808,8 @@ def write_comment(username: str, review_id=None, track_id=None) -> None:
 
 # Finished
 def print_comment(c: tuple) -> None:
+    """Print a comment.
+    c is a result from SHOW * FROM comment."""
     comment_id, item_id, posted_by, post_date, post_time, body = c[0], c[1], c[2], c[3], c[4], c[5], 
     print(BOLD + "+" + "-" * 98 + "+" + END)
     user_data = f" Comment by {posted_by}"
@@ -814,6 +840,7 @@ def print_comment(c: tuple) -> None:
 
 # Finished
 def view_tracklist(username, album_id, album_name_str):
+    """Print the tracks that appear on a given album (in tracklist order). Allow for viewing and writing comments on tracks."""
     print(BOLD + f"---Viewing tracklist for {album_name_str}---" + END)
     cursor.execute("SELECT * FROM track t WHERE EXISTS (SELECT * FROM appears_on a WHERE track_id=t.id AND album_id=%s)", [album_id])
     unordered_tracks = cursor.fetchall()
@@ -853,7 +880,7 @@ def view_tracklist(username, album_id, album_name_str):
 
 # Finished
 def login() -> None: 
-    """Log in page. Prompts for email/username and password, validates, and enters homepage if a matching user exists"""
+    """Log in page. Prompts for email/username and password, validates, and enters homepage if a matching user exists."""
     global cursor
     done = False
     username = ""
