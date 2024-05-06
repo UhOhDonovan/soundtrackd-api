@@ -215,6 +215,7 @@ def view_artist(username: str, artist_id: str):
         "SELECT COUNT(*), AVG(rating) FROM review WHERE EXISTS (SELECT * FROM album a WHERE a.id=album_id AND EXISTS (SELECT * FROM released_album WHERE album_id=a.id AND artist_id=%s))",
         [artist_id],
     )
+
     num_reviews, avg_rating = cursor.fetchall()[0]
     while user_input != "b":
         left_pad = (90 - len(artist[1])) // 2
@@ -232,7 +233,9 @@ def view_artist(username: str, artist_id: str):
             "|"
             + "{:^48}".format(f" {num_reviews} Reviews")
             + "|"
-            + "{:^49}".format(f"Average Rating: {round(float(avg_rating), 2)}")
+            + "{:^49}".format(
+                f"Average Rating: {'X' if not avg_rating else round(float(avg_rating), 2)}"
+            )
             + "|"
         )
         print(BOLD + "+" + "-" * 98 + "+" + END)
