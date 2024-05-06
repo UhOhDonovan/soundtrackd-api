@@ -243,7 +243,7 @@ def album_search(username: str) -> None:
                     BOLD
                     + str(i + 1)
                     + END + ": " + UNDERLINE
-                    + f"{results[i]["name"]} ({results[i]["release_date"][:4]})" + END + " by ", end=""
+                    + f"{results[i]['name']} ({results[i]['release_date'][:4]})" + END + " by ", end=""
                 )
                 for x in results[i]["artists"][:-1]:
                     print(x["name"], end=", ")
