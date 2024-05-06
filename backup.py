@@ -1189,7 +1189,6 @@ def view_comments(username: str, review_id=None, track_id=None) -> None:
 def write_comment(username: str, review_id=None, track_id=None) -> None:
     """Prompt for writing a comment about a given review or track."""
     global cursor, db
-    user_input = ""
     comment_text = ""
     if review_id:
         variation = "review"
@@ -1218,7 +1217,6 @@ def write_comment(username: str, review_id=None, track_id=None) -> None:
             thetime = strftime("%H:%M:%S", time.localtime())
             fake_comment = (0, 0, username, thedate, thetime, comment_text)
             print_comment(fake_comment)
-            # preview_review(username, album_name, rating, review_text)
             confirm = ""
             while not (confirm in ("y", "n")):
                 confirm = input(
