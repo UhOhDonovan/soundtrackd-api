@@ -202,14 +202,15 @@ def view_artist(username: str, artist_id: str):
         "SELECT * FROM artist WHERE id=%s",
         [artist_id],
     )
-    artist = cursor.fetchall()[0]
+    artist = cursor.fetchall()
     if not artist:
         create_artist(artist_id)
         cursor.execute(
             "SELECT * FROM artist WHERE id=%s",
             [artist_id],
         )
-        artist = cursor.fetchall()[0]
+        artist = cursor.fetchall()
+    artist = artist[0]
     cursor.execute(
         "SELECT COUNT(*), AVG(rating) FROM review WHERE EXISTS (SELECT * FROM album a WHERE a.id=album_id AND EXISTS (SELECT * FROM released_album WHERE album_id=a.id AND artist_id=%s))",
         [artist_id],
