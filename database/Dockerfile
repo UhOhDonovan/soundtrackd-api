@@ -1,3 +1,5 @@
+# Designed to be built during the first initialization of the database on the system
+
 FROM mysql:latest AS builder
 
 # That file does the DB initialization but also runs mysql daemon, by removing the last line it will only init
@@ -17,3 +19,6 @@ RUN ["/usr/local/bin/docker-entrypoint.sh", "mysqld", "--datadir", "/initialized
 FROM mysql:latest
 
 COPY --from=builder /initialized-db /var/lib/mysql
+
+# run `docker build -t soundtrackd-db .` to build the image 
+# run `docker run -d --rm --name <container-name> soundtrackd-db` or use docker-compose to start container
