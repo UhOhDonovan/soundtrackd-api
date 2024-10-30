@@ -2,3 +2,7 @@ mysql-connector-python==8.4.0
 python-dotenv==1.0.1
 requests==2.31.0
 fastapi==0.111.0
+sqlalchemy==2.0.35
+pymysql==1.1.1
+sqlmodel==0.0.22
+cryptography==43.0.3
