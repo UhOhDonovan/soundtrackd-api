@@ -54,7 +54,7 @@ class ReleasedAlbum(SQLModel, table=True):
 class Review(SQLModel, table=True):
     __tablename__ = "review"
 
-    id: int = Field(primary_key=True, autoincrement=True)
+    id: int = Field(primary_key=True)
     posted_by: str = Field(foreign_key="user.username", max_length=60)
     album_id: str = Field(foreign_key="album.id", max_length=22)
     post_date: date = Field()
@@ -66,7 +66,7 @@ class Review(SQLModel, table=True):
 class ReviewComment(SQLModel, table=True):
     __tablename__ = "review_comment"
 
-    id: int = Field(primary_key=True, autoincrement=True)
+    id: int = Field(primary_key=True)
     review_id: int = Field(foreign_key="review.id")
     posted_by: str = Field(foreign_key="user.username", max_length=60)
     post_date: date = Field()
@@ -91,7 +91,7 @@ class ReleasedTrack(SQLModel, table=True):
 class TrackComment(SQLModel, table=True):
     __tablename__ = "track_comment"
 
-    id: int = Field(primary_key=True, autoincrement=True)
+    id: int = Field(primary_key=True)
     track_id: str = Field(primary_key=True, foreign_key="track.id", max_length=22)
     posted_by: str = Field(foreign_key="user.username", max_length=60)
     post_date: date = Field()
