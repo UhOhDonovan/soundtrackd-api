@@ -14,11 +14,6 @@ SQLALCHEMY_DATABASE_URL = "mysql+pymysql://{0}:{1}@{2}:{3}/{4}".format(
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
-
-def create_db_and_tables():
-    SQLModel.metadata.create_all(engine)
-
-
 def get_session():
     with Session(engine) as session:
         yield session
