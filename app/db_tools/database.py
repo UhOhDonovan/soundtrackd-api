@@ -1,4 +1,6 @@
 from sqlmodel import Session, create_engine
+from fastapi import Depends
+from typing import Annotated
 
 user = "root"
 # TODO: Store password as a secret
@@ -13,7 +15,8 @@ SQLALCHEMY_DATABASE_URL = "mysql+pymysql://{0}:{1}@{2}:{3}/{4}".format(
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
-
 def get_session():
     with Session(engine) as session:
         yield session
+
+SessionDep = Annotated[Session, Depends(get_session)]

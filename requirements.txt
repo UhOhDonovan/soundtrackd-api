@@ -6,3 +6,5 @@ sqlalchemy==2.0.35
 pymysql==1.1.1
 sqlmodel==0.0.22
 cryptography==43.0.3
+uvicorn==0.31.0
+pydantic==2.9.2
