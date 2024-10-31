@@ -1,4 +1,4 @@
-POST http://localhost:5345/users/register
+POST http://0.0.0.0:5345/users/register
 content-type: application/json
 
 {
@@ -10,9 +10,9 @@ content-type: application/json
 
 ###
 
-GET http://localhost:5345/users/list
+GET http://0.0.0.0:5345/users/list
 
 
 ###
 
-GET http://localhost:5345
+GET http://0.0.0.0:5345

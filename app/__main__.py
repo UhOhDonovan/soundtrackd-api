@@ -30,4 +30,4 @@ def read_root(session: SessionDep):  # Table check
 
 if __name__ == "__main__":
     print("\n" + WELCOME_MSG + "\n")
-    uvicorn.run(app, port=5345)
+    uvicorn.run(app, host="0.0.0.0", port=5345)
