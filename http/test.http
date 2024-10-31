@@ -1,0 +1,18 @@
+POST http://localhost:5345/users/register
+content-type: application/json
+
+{
+  "username": "string",
+  "email": "user@example.com",
+  "password": "string",
+  "password_confirmation": "string"
+}
+
+###
+
+GET http://localhost:5345/users/list
+
+
+###
+
+GET http://localhost:5345
