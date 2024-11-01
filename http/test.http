@@ -1,4 +1,4 @@
-POST http://localhost:5345/users/register
+POST https://soundtrackd-api.ewitsdonovan.com/users/register
 content-type: application/json
 
 {
@@ -16,3 +16,7 @@ GET http://localhost:5345/users/list
 ###
 
 GET http://localhost:5345
+
+###
+
+GET https://soundtrackd-api.ewitsdonovan.com/users/list

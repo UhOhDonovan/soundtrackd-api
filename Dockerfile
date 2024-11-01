@@ -7,3 +7,5 @@ RUN pip install -r requirements.txt
 ENV IS_CONTAINER=1
 CMD ["python", "-m", "app"]
 # Or enter the name of your unique directory and parameter set.
+
+# Run `docker build -t soundtrackd-api .` to build image
