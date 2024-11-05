@@ -7,11 +7,25 @@ from db_tools.database import SessionDep
 from routes import users
 from routes import search
 from sqlalchemy import text
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
+origins = [
+    "http://localhost",
+    "http://localhost:3000",  # Your frontend URL
+]
+
 app.include_router(users.router, prefix="/users")
 app.include_router(search.router, prefix="/search")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],  # Allowed HTTP methods (GET, POST, PUT, etc.)
+    allow_headers=["*"],  # Allowed headers
+)
 
 
 @app.get("/")

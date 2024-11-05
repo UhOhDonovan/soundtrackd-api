@@ -11,10 +11,11 @@ import getpass
 import re
 import hashlib
 
+
 router = APIRouter()
 
-CLIENT_ID = "82f96e6cf1814f488b6d664ffc0d7587"
-CLIENT_SECRET = "14e72310fc734968b4a6d3d74a26a2d9"
+CLIENT_ID = "NOT ALLOWED"
+CLIENT_SECRET = "NOT ALLOWED"
 
 
 def get_token() -> str:
@@ -33,7 +34,7 @@ def get_token() -> str:
 
 
 @router.get("/album")
-def search_album(q: str):
+def search_album(q: str = "test"):
     type = "album"
     token = get_token()
     url = "https://api.spotify.com/v1/search"
@@ -43,7 +44,9 @@ def search_album(q: str):
     response = get(query_url, headers=headers)
     result = json.loads(response.content)[type + "s"]["items"]
     print(result)
-    return result
+    formatted_result = {"items": result}
+    test = {"message": "Hello World"}
+    return formatted_result
 
 
 @router.get("/artist")
