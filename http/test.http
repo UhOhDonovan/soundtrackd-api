@@ -11,6 +11,9 @@ content-type: application/json
 ###
 
 GET http://localhost:5345/users/list
+###
+
+GET http://localhost:5345/search/album?q=Panic
 
 
 ###

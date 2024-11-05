@@ -1,10 +1,11 @@
 from fastapi import FastAPI
 import uvicorn
-from .dependencies.colors import WELCOME_MSG
-from .db_tools.models import SQLModel
-from .db_tools.database import SessionDep
-from .routes import users
-from .routes import search
+
+from dependencies.colors import WELCOME_MSG
+from db_tools.models import SQLModel
+from db_tools.database import SessionDep
+from routes import users
+from routes import search
 from sqlalchemy import text
 
 app = FastAPI()
