@@ -11,3 +11,12 @@ class RegistrationObject(BaseModel):
         if "password" in values.data and v != values.data["password"]:
             raise ValueError("password and password_confirmation do not match")
         return v
+
+
+class Login(BaseModel):
+    user: str | EmailStr
+    password: str
+
+class CurrentUser(BaseModel):
+    username: str
+    email: EmailStr

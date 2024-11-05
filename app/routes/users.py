@@ -1,6 +1,8 @@
 from typing import Union, Annotated
-from fastapi import HTTPException, Response, APIRouter, Query
-from ..dependencies.apimodels import RegistrationObject
+from fastapi import HTTPException, Response, APIRouter, Query, Depends
+from fastapi.security import OAuth2PasswordRequestForm
+from ..dependencies.apimodels import RegistrationObject, CurrentUser
+from ..dependencies.authentication import get_current_user, create_access_token
 from sqlmodel import select
 from ..db_tools.models import User
 from ..db_tools.database import SessionDep
@@ -34,3 +36,27 @@ def register_user(session: SessionDep, new_user: RegistrationObject):
     session.refresh(user)
 
     return user
+
+
+@router.post("/token")
+async def user_login(
+    session: SessionDep, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
+):
+    user = session.get(User, form_data.username)
+    if user:
+        hashed_password = hashlib.sha256(form_data.password.encode()).hexdigest()
+        if user.password == hashed_password:
+            access_token = create_access_token(data={"sub": user.username})
+            return {"access_token": access_token, "token_type": "bearer"}
+    raise HTTPException(
+        status_code=401,
+        detail="Incorrect username / password",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+@router.get("/me")
+async def read_users_me(
+    current_user: Annotated[CurrentUser, Depends(get_current_user)]
+):
+    return current_user
