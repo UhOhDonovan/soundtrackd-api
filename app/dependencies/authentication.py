@@ -1,7 +1,7 @@
 from typing import Annotated
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
-from ..db_tools.database import Session, engine
+from ..db_tools.database import SessionDep
 from ..db_tools.models import User
 import jwt
 from jwt.exceptions import InvalidTokenError
@@ -24,15 +24,7 @@ def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-
-def get_user(username):
-    with Session(engine) as session:
-        user = session.get(User, username)
-        if user:
-            return user.username
-
-
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], session: SessionDep):
     credentials_exception = HTTPException(
         status_code=401,
         detail="Could not validate credentials",
@@ -45,7 +37,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
             raise credentials_exception
     except InvalidTokenError:
         raise credentials_exception
-    user = get_user(username)
+    user = session.get(User, username)
     if user:
         return user
     raise credentials_exception

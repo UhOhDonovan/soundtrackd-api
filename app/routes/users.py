@@ -1,7 +1,7 @@
 from typing import Union, Annotated
 from fastapi import HTTPException, Response, APIRouter, Query, Depends
 from fastapi.security import OAuth2PasswordRequestForm
-from ..dependencies.apimodels import RegistrationObject, CurrentUser
+from ..dependencies.apimodels import RegistrationObject
 from ..dependencies.authentication import get_current_user, create_access_token
 from sqlmodel import select
 from ..db_tools.models import User
@@ -57,6 +57,6 @@ async def user_login(
 
 @router.get("/me")
 async def read_users_me(
-    current_user: Annotated[CurrentUser, Depends(get_current_user)]
+    current_user: Annotated[str, Depends(get_current_user)]
 ):
     return current_user
