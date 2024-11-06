@@ -23,5 +23,5 @@ FROM mysql:latest
 
 COPY --from=builder /initialized-db /var/lib/mysql
 
-# run `docker build --built-arg MYSQL_ROOT_PASSWORD=$(cat .env | grep DB_PASSWORD | cut -d '=' -f2) -t soundtrackd-db .` to build the image 
+# run `docker build --build-arg MYSQL_ROOT_PASSWORD=$(cat .env | grep DB_PASSWORD | cut -d '=' -f2) -t soundtrackd-db .` to build the image 
 # run `docker run -d --rm --name <container-name> soundtrackd-db` or use docker-compose to start container
