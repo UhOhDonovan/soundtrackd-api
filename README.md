@@ -45,6 +45,8 @@ python -m app
 
 to start the api.
 
+If you are using VSCode, you can use the provided debug configuration to run the api. This allows you to run the application with breakpoints and variable inspection, and it's *super* useful for debugging. Just go to the "Run and Debug" tab in the primary side bar and select the `Soundtrackd API: Module` configuration. Press the green play button to run it. *You may need to have an sh based terminal as your default integrated terminal for this to work by default*.
+
 ## Deploying the Backend
 
 Soundtrackd uses docker to deploy containers for each layer of its archicture. The dockerfile for the api is found in the project root. The dockerfile for the database is found in `/database` in the project root.
