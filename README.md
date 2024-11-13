@@ -31,7 +31,7 @@ These are secrets that will be read by the application to be used for user authe
 
 CD into the `/database` directory.
 
-Run `docker build --build-arg MYSQL_ROOT_PASSWORD=$(cat .env | grep DB_PASSWORD | cut -d '=' -f2) -t soundtrackd-db .` to build the image.
+Run `docker build --build-arg MYSQL_ROOT_PASSWORD=$(cat ../.env | grep DB_PASSWORD | cut -d '=' -f2) -t soundtrackd-db .` to build the image.
 
 Navigate back to project root.
 
