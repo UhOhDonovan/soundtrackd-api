@@ -38,9 +38,8 @@ else
 fi
 
 # Continue with the rest of the script
-echo
 
-pip install -r requirements.txt
+pip install -q -r requirements.txt
 
 echo
 
