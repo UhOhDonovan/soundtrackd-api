@@ -4,6 +4,8 @@
 
 Python version: 3.11
 
+There is now an [installation.sh](installation.sh) script for sh users to run the setup process automatically. If you do not have docker, docker-compose, and some sort of python virtualization installed, it will prompt you to do so.
+
 ## Getting Started
 
 Clone the repository:
