@@ -10,7 +10,7 @@ Clone the repository:
 
 ```git clone https://github.com/UhOhDonovan/soundtrackd-api```
 
-Install pip packages (It is recommended to use a virtual environment for this):
+Install pip packages (It is recommended to use a [virtual environment](https://docs.python.org/3/library/venv.html) for this):
 
 ```pip install -r requirements.txt```
 
@@ -25,7 +25,7 @@ These are secrets that will be read by the application to be used for user authe
 
 ## Initializing the Database
 
-**Make sure you have Docker and Docker Compose installed**
+**Make sure you have [Docker](https://docs.docker.com/get-docker) and [Docker Compose](https://docs.docker.com/compose/install) installed**
 
 CD into the `/database` directory.
 
