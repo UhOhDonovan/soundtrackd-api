@@ -23,3 +23,10 @@ GET http://localhost:5345
 ###
 
 GET https://soundtrackd-api.ewitsdonovan.com/users/list
+
+###
+
+POST http://localhost:5345/users/token 
+content-type: application/x-www-form-urlencoded
+
+"grant_type=&username=string&password=string&scope=&client_id=&client_secret="

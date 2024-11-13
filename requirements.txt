@@ -8,3 +8,6 @@ sqlmodel==0.0.22
 cryptography==43.0.3
 uvicorn==0.31.0
 pydantic==2.9.2
+pyjwt==2.9.0
+bcrypt==4.2.0
+passlib==1.7.4

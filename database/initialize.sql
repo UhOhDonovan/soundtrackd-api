@@ -27,7 +27,7 @@ CREATE TABLE follows_artist(
     user_id VARCHAR(60),
     artist_spotify_id VARCHAR(22),
     -- artist_id VARCHAR(22),
-    PRIMARY KEY (user_id, artist_id),
+    PRIMARY KEY (user_id, artist_spotify_id),
     CONSTRAINT follows_fk_user_id FOREIGN KEY (user_id) REFERENCES user(username)
     -- CONSTRAINT follows_fk_artist_id FOREIGN KEY (artist_id) REFERENCES artist(id)
 );
