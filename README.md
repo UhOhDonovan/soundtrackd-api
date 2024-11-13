@@ -12,7 +12,7 @@ Clone the repository:
 
 ```git clone https://github.com/UhOhDonovan/soundtrackd-api```
 
-Install pip packages (It is recommended to use a [virtual environment](https://docs.python.org/3/library/venv.html) for this):
+Install pip packages (It is recommended to use a [virtual environment](https://docs.python.org/3/library/venv.html) or [pyenv](https://github.com/pyenv/pyenv) for this):
 
 ```pip install -r requirements.txt```
 
