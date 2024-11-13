@@ -1,9 +1,9 @@
 from typing import Union, Annotated
 from fastapi import HTTPException, Response, APIRouter, Query
-from dependencies.apimodels import RegistrationObject
+from ..dependencies.apimodels import RegistrationObject
 from sqlmodel import select
-from db_tools.models import User
-from db_tools.database import SessionDep
+from ..db_tools.models import User
+from ..db_tools.database import SessionDep
 import getpass
 import re
 import hashlib

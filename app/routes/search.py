@@ -1,9 +1,9 @@
 from typing import Union, Annotated
 from fastapi import HTTPException, Response, APIRouter, Query
-from dependencies.apimodels import RegistrationObject
+from ..dependencies.apimodels import RegistrationObject
 from sqlmodel import select
-from db_tools.models import User
-from db_tools.database import SessionDep
+from ..db_tools.models import User
+from ..db_tools.database import SessionDep
 from requests import post, get
 import base64
 import json
@@ -14,8 +14,8 @@ import hashlib
 
 router = APIRouter()
 
-CLIENT_ID = "NOT ALLOWED"
-CLIENT_SECRET = "NOT ALLOWED"
+CLIENT_ID = "82f96e6cf1814f488b6d664ffc0d7587"
+CLIENT_SECRET = "14e72310fc734968b4a6d3d74a26a2d9"
 
 
 def get_token() -> str:
