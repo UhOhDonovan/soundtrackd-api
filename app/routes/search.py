@@ -10,12 +10,13 @@ import json
 import getpass
 import re
 import hashlib
+import os
 
 
 router = APIRouter()
 
-CLIENT_ID = "82f96e6cf1814f488b6d664ffc0d7587"
-CLIENT_SECRET = "14e72310fc734968b4a6d3d74a26a2d9"
+CLIENT_ID = os.getenv("SPOTIFY_ID")
+CLIENT_SECRET = os.getenv("SPOTIFY_SECRET")
 
 
 def get_token() -> str:
