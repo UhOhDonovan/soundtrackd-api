@@ -3,12 +3,13 @@ import uvicorn
 from .dependencies.colors import WELCOME_MSG
 from .db_tools.models import SQLModel
 from .db_tools.database import SessionDep
-from .routes import users
+from .routes import users, review
 from sqlalchemy import text
 
 app = FastAPI()
 
 app.include_router(users.router, prefix="/users")
+app.include_router(review.router, prefix="/review")
 
 
 @app.get("/")
