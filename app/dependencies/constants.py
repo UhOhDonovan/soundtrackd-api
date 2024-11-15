@@ -1,7 +1,8 @@
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
+from dotenv import main
+
+main.load_dotenv()
 
 # OAuth2 authentication
 SECRET_KEY = os.getenv("API_SECRET_KEY")

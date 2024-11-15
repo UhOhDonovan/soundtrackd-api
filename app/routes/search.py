@@ -40,7 +40,7 @@ def search_album(q: str = "test"):
     token = get_token()
     url = "https://api.spotify.com/v1/search"
     headers = {"Authorization": "Bearer " + token}
-    query = f"?q={q}&type={type}&limit=10"
+    query = f"?q={q}&type={type}&limit=20"
     query_url = url + query
     response = get(query_url, headers=headers)
     result = json.loads(response.content)[type + "s"]["items"]
@@ -48,6 +48,21 @@ def search_album(q: str = "test"):
     formatted_result = {"items": result}
     test = {"message": "Hello World"}
     return formatted_result
+
+
+@router.get("/album/id")
+def get_album(id: str = "test"):
+    type = "album"
+    token = get_token()
+    url = f"https://api.spotify.com/v1/albums/{id}"
+    headers = {"Authorization": "Bearer " + token}
+    # query = f"?q={q}&type={type}&limit=10"
+    # query_url = url + query
+    response = get(url, headers=headers)
+    result = json.loads(response.content)
+    print(result)
+    formatted_result = {"items": result}
+    return result
 
 
 @router.get("/artist")
