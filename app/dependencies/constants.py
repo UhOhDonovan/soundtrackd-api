@@ -6,7 +6,7 @@ main.load_dotenv()
 
 # Spotify API Authentication
 SPOTIFY_ID = os.getenv("SPOTIFY_ID")
-SPOTIFY_ID = os.getenv("SPOTIFY_SECRET")
+SPOTIFY_SECRET = os.getenv("SPOTIFY_SECRET")
 
 # OAuth2 authentication
 SECRET_KEY = os.getenv("API_SECRET_KEY")
