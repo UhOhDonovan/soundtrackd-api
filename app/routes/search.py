@@ -4,6 +4,7 @@ from ..dependencies.apimodels import RegistrationObject
 from sqlmodel import select
 from ..db_tools.models import User
 from ..db_tools.database import SessionDep
+from ..dependencies.constants import SPOTIFY_ID, SPOTIFY_SECRET
 from requests import post, get
 import base64
 import json
@@ -15,13 +16,10 @@ import os
 
 router = APIRouter()
 
-CLIENT_ID = os.getenv("SPOTIFY_ID")
-CLIENT_SECRET = os.getenv("SPOTIFY_SECRET")
-
 
 def get_token() -> str:
     """Retrieve access token for Spotify API (expires after 1 hour)"""
-    authorization_str = (CLIENT_ID + ":" + CLIENT_SECRET).encode("utf-8")
+    authorization_str = (SPOTIFY_ID + ":" + SPOTIFY_SECRET).encode("utf-8")
     authorization_str = str(base64.b64encode(authorization_str), "utf-8")
     url = "https://accounts.spotify.com/api/token"
     headers = {
@@ -77,28 +75,3 @@ def search_artist(q: str):
     result = json.loads(response.content)[type + "s"]["items"]
     print(result)
     return result
-
-
-# @router.get("/list")
-# def get_users(
-#     session: SessionDep,
-#     offset: int = 0,
-#     limit: Annotated[int, Query(le=100)] = 100,
-# ):
-#     users = session.exec(select(User).offset(offset).limit(limit)).all()
-#     return users
-
-
-# @router.post("/register")
-# def register_user(session: SessionDep, new_user: RegistrationObject):
-#     hashed_password = hashlib.sha256(new_user.password.encode()).hexdigest()
-
-#     user = User(
-#         email=new_user.email, username=new_user.username, password=hashed_password
-#     )
-
-#     session.add(user)
-#     session.commit()
-#     session.refresh(user)
-
-#     return user
