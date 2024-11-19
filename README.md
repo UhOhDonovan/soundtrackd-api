@@ -74,3 +74,15 @@ docker-compose up -d <service name>
 ```
 
 The api container will publish to port 5345 and the db container will publish to port 3306 by default. These services can be deployed to a web container such as a Kubernetes cluster on Azure or behind a reverse proxy such as Traefik. Use a DNS provider such as Cloudflare to point a domain name rule to your server's public ip. Voila! You have sucessfully deployed the Soundtrackd backend!
+
+## WARNING
+
+One thing to note is that when recreating the database with a new password, the data volume that contains all the container information needs to be removed, and the image completely rebuild with no cache. To remove the data volume, stop the container, then run:
+
+```sh
+docker volume rm <volume name>
+docker system prune -a
+docker build --no-cache --build-arg MYSQL_ROOT_PASSWORD=$(cat .env | grep DB_PASSWORD | cut -d '=' -f2) -t soundtrackd-db ./database
+```
+
+This will completely wipe the database and refresh it without any local caching. Do this only if you need a completely new database system with new authentication, and you are willing to permanently lose all data currently in your database.
