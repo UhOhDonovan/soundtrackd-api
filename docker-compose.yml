@@ -1,11 +1,12 @@
 services:
   # In order to run, you need to build the services from the dockerfiles in this repository
   db:
+    env_file: ".env"
     image: soundtrackd-db
     container_name: soundtrackd-db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: 'password'
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
     ports:
       - 3306:3306
     volumes:
