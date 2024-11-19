@@ -14,6 +14,7 @@ app = FastAPI()
 origins = [
     "http://localhost",
     "http://localhost:3000",  # Your frontend URL
+    "https://soundtrackd-api.ewitsdonovan.com",
 ]
 
 app.include_router(users.router, prefix="/users")
