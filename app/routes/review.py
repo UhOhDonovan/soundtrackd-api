@@ -41,6 +41,7 @@ async def read_review(
         .offset(offset)
         .limit(limit)
     )
+    return review, comments
 
 
 @router.post("/write")
