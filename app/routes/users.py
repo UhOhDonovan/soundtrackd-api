@@ -26,7 +26,11 @@ def get_users(
 @router.post("/register")
 def register_user(session: SessionDep, new_user: RegistrationObject):
     hashed_password = hashlib.sha256(new_user.password.encode()).hexdigest()
+    user = session.get(User, new_user.username)
 
+    if user:
+        raise HTTPException(status_code=401, detail="User already exists")
+    
     user = User(
         email=new_user.email, username=new_user.username, password=hashed_password
     )
