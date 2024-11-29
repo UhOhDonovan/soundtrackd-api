@@ -20,3 +20,8 @@ class Login(BaseModel):
 class CurrentUser(BaseModel):
     username: str
     email: EmailStr
+
+class ReviewSubmission(BaseModel):
+    album_spotify_id: str
+    body: str | None
+    rating: int | None
