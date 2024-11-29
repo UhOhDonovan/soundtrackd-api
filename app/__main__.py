@@ -4,8 +4,7 @@ import uvicorn
 from .dependencies.colors import WELCOME_MSG
 from .db_tools.models import SQLModel
 from .db_tools.database import SessionDep
-from .routes import users, review
-from .routes import search
+from .routes import users, review, search
 from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -14,7 +13,7 @@ app = FastAPI()
 origins = [
     "http://localhost",
     "http://localhost:3000",  # Your frontend URL
-    "https://soundtrackd-api.ewitsdonovan.com",
+    "https://soundtrackd-frontend.ewitsdonovan.com",
 ]
 
 app.include_router(users.router, prefix="/users")
