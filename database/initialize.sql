@@ -50,7 +50,7 @@ CREATE TABLE follows_artist(
 -- );
 
 CREATE TABLE review(
-    id INTEGER AUTO_INCREMENT PRIMARY KEY,
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     posted_by VARCHAR(60) NOT NULL,
     -- album_id VARCHAR(22) NOT NULL,
     album_spotify_id VARCHAR(22) NOT NULL,
@@ -63,8 +63,8 @@ CREATE TABLE review(
 );
 
 CREATE TABLE review_comment(
-    id INTEGER AUTO_INCREMENT PRIMARY KEY,
-    review_id INTEGER NOT NULL,
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    review_id BIGINT UNSIGNED NOT NULL,
     posted_by VARCHAR(60) NOT NULL,
     post_date DATE NOT NULL,
     post_time TIME NOT NULL,
@@ -88,7 +88,7 @@ CREATE TABLE review_comment(
 -- );
 
 CREATE TABLE track_comment(
-    id INTEGER AUTO_INCREMENT PRIMARY KEY,
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     -- track_id VARCHAR(22) NOT NULL,
     track_spotify_id VARCHAR(22) NOT NULL,
     posted_by VARCHAR(60) NOT NULL,

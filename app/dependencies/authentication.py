@@ -22,7 +22,7 @@ def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes
 
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)], session: SessionDep
-):
+) -> str:
     credentials_exception = HTTPException(
         status_code=401,
         detail="Could not validate credentials",
@@ -37,5 +37,5 @@ async def get_current_user(
         raise credentials_exception
     user = session.get(User, username)
     if user:
-        return user
+        return user.username
     raise credentials_exception

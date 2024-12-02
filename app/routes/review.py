@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from typing import Annotated
-from datetime import date, time
+from datetime import datetime, date
 from sqlmodel import select
 from ..dependencies.authentication import get_current_user
 from ..dependencies.apimodels import ReviewSubmission
@@ -50,8 +50,8 @@ async def submit_review(
     session: SessionDep,
     current_user: Annotated[str, Depends(get_current_user)],
 ):
-    post_date = date.today()
-    post_time = time.time()
+    post_date = date.today()    
+    post_time = datetime.now().time()
     review = Review(
         album_spotify_id=submission.album_spotify_id,
         posted_by=current_user,
