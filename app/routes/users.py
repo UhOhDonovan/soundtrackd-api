@@ -9,9 +9,9 @@ from ..db_tools.database import SessionDep
 import getpass
 import re
 import hashlib
+from sqlalchemy import text
 
 router = APIRouter()
-
 
 @router.get("/list")
 def get_users(
@@ -24,7 +24,24 @@ def get_users(
 
 
 @router.post("/register")
-def register_user(session: SessionDep, new_user: RegistrationObject):
+async def register_user(session: SessionDep, new_user: RegistrationObject):
+    
+    # Ensure we are not registeringan account with a duplicate username
+    if session.query(User).filter(User.email == new_user.username).first():
+        raise HTTPException(
+            status_code=409,
+            detail="A user already exists with this username",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Ensure we are not registering an account with a duplicate email
+    if session.query(User).filter(User.email == new_user.email).first():
+        raise HTTPException(
+            status_code=409,
+            detail="A user already exists with this email",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
     hashed_password = hashlib.sha256(new_user.password.encode()).hexdigest()
     user = session.get(User, new_user.username)
 
